@@ -1650,6 +1650,103 @@ namespace Jellyfish.Commands.Tests
         //}
 
 
+        [Fact]
+        public async void testDistinctCircuitBreakers()
+        {
+            var ctx = new MockJellyfishContext();
+            try
+            {
+                var command1 = TestCommandFactory.Get(ctx, output, ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS,
+                                commandName: "testDistinctCircuitBreakers1");
+                Assert.Equal(TestCommandFactory.EXECUTE_VALUE, await command1.ExecuteAsync());
+                var command2 = TestCommandFactory.Get(ctx, output, ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS,
+                                commandName: "testDistinctCircuitBreakers2");
+                Assert.Equal(TestCommandFactory.EXECUTE_VALUE, await command2.ExecuteAsync());
+
+                // 2 different circuit breakers should be created
+                Assert.NotSame(command1.CircuitBreaker, command2.CircuitBreaker);
+            }
+            catch (Exception )
+            {
+                new Exception("We received an exception.");
+            }
+        }
+
+        [Fact]
+        public async void testSameCircuitBreakers()
+        {
+            var ctx = new MockJellyfishContext();
+            try
+            {
+                var command1 = TestCommandFactory.Get(ctx, output, ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS,
+                                commandName: "testSameCircuitBreakers");
+                Assert.Equal(TestCommandFactory.EXECUTE_VALUE, await command1.ExecuteAsync());
+                var command2 = TestCommandFactory.Get(ctx, output, ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS,
+                                commandName: "testSameCircuitBreakers");
+                Assert.Equal(TestCommandFactory.EXECUTE_VALUE, await command2.ExecuteAsync());
+
+                // 2 different circuit breakers should be created
+                Assert.Same(command1.CircuitBreaker, command2.CircuitBreaker);
+            }
+            catch (Exception)
+            {
+                new Exception("We received an exception.");
+            }
+        }
+
+        /**
+         * Test Request scoped caching of commands so that a 2nd duplicate call doesn't execute but returns the previous Future
+         */
+        [Fact]
+        public async void testRequestCache1()
+        {
+            var ctx = new MockJellyfishContext();
+            TestCircuitBreaker circuitBreaker = new TestCircuitBreaker(new MockedClock());
+            SuccessfulCacheableCommand<String> command1 = new SuccessfulCacheableCommand<string>(ctx, circuitBreaker, true, "A");
+            SuccessfulCacheableCommand<String> command2 = new SuccessfulCacheableCommand<string>(ctx, circuitBreaker, true, "A");
+
+
+            Assert.Equal("A", await command1.ExecuteAsync());
+            Assert.Equal("A", await command2.ExecuteAsync());
+
+
+            Assert.True(command1.executed);
+            // the second one should not have executed as it should have received the cached value instead
+            Assert.False(command2.executed);
+
+            // the execution log for command1 should show a SUCCESS
+            Assert.Equal(1, command1.ExecutionEvents.Count());
+            Assert.True(command1.ExecutionEvents.Contains(EventType.SUCCESS));
+            Assert.True(command1.ExecutionTimeInMilliseconds > -1);
+            Assert.False(command1.IsResponseFromCache);
+
+            // the execution log for command2 should show it came from cache
+            Assert.Equal(2, command2.ExecutionEvents.Count()); // it will include the SUCCESS + RESPONSE_FROM_CACHE
+            Assert.True(command2.ExecutionEvents.Contains(EventType.SUCCESS));
+            Assert.True(command2.ExecutionEvents.Contains(EventType.RESPONSE_FROM_CACHE));
+            Assert.True(command2.ExecutionTimeInMilliseconds == -1);
+            Assert.True(command2.IsResponseFromCache);
+
+            Assert.Equal(1, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.SUCCESS));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.EXCEPTION_THROWN));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.FAILURE));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.BAD_REQUEST));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_REJECTION));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_FAILURE));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_SUCCESS));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.SEMAPHORE_REJECTED));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.SHORT_CIRCUITED));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.THREAD_POOL_REJECTED));
+            Assert.Equal(0, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.TIMEOUT));
+            Assert.Equal(1, circuitBreaker.Metrics.GetRollingCount(RollingNumberEvent.RESPONSE_FROM_CACHE));
+
+            Assert.Equal(0, circuitBreaker.Metrics.GetHealthCounts().ErrorPercentage);
+            Assert.Equal(0, circuitBreaker.Metrics.CurrentConcurrentExecutionCount);
+
+            Assert.Equal(2, ctx.GetRequestLog().GetAllExecutedCommands().Count());
+        }
+
+
         private TestServiceCommand getSharedCircuitBreakerCommand(IJellyfishContext ctx, ExecutionIsolationStrategy isolationStrategy, TestCircuitBreaker circuitBreaker, TestCommandFactory.FallbackResult  fallbackResult = TestCommandFactory.FallbackResult.SUCCESS, TestCommandFactory.ExecutionResult executionResult=TestCommandFactory.ExecutionResult.FAILURE, Action<CommandPropertiesBuilder> setter=null, int executionLatency=0, int fallbackLatency=0, ITryableSemaphore semaphore=null, [System.Runtime.CompilerServices.CallerMemberName] string commandName = null)
         {
             var cmd = TestCommandFactory.Get(ctx, output, isolationStrategy,

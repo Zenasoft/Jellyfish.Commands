@@ -120,6 +120,39 @@ namespace Jellyfish.Commands.Tests
         }
     }
 
+    /**
+     * A Command implementation that supports caching.
+     */
+    internal class SuccessfulCacheableCommand<T> : ServiceCommand<T>
+    {
+
+        private bool cacheEnabled;
+        public volatile bool executed = false;
+        private T value;
+
+        public SuccessfulCacheableCommand(IJellyfishContext ctx, TestCircuitBreaker circuitBreaker, bool cacheEnabled, T value) 
+            : base(ctx, "SuccessfulCacheableCommand", null, clock: circuitBreaker.Clock, metrics:circuitBreaker.Metrics, circuitBreaker:circuitBreaker, properties: CommandPropertiesTest.GetUnitTestPropertiesSetter().WithRequestCacheEnabled(true))
+        {
+            this.value = value;
+            this.cacheEnabled = cacheEnabled;
+        }
+
+        protected override Task<T> Run(CancellationToken token)
+        {
+            executed = true;
+            return Task.FromResult(value);
+        }
+
+
+        protected override string GetCacheKey()
+        {
+            if (cacheEnabled)
+                return value.ToString();
+            else
+                return null;
+        }
+    }
+
     static class TestCommandFactory
     {
         public static int EXECUTE_VALUE = 1;

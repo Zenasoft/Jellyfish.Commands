@@ -21,6 +21,12 @@ namespace Jellyfish.Commands
 
     public abstract class ServiceCommand<T> : ServiceCommandInfo
     {
+        class CacheItem
+        {
+            public ExecutionResult ExecutionResult;
+            public T Value;
+        }
+
         [Flags]
         protected enum ServiceCommandOptions
         {
@@ -30,7 +36,7 @@ namespace Jellyfish.Commands
             HasCacheKey = 4
         }
 
-        private RequestCache<T> _requestCache;
+        private RequestCache<CacheItem> _requestCache;
         private RequestLog _currentRequestLog;
         private ServiceCommandOptions _flags;
         private ICircuitBreaker _circuitBreaker;
@@ -47,6 +53,8 @@ namespace Jellyfish.Commands
         private int _started;
         private bool _isExecutedInThread;
         private bool _isExecutionComplete;
+
+        public ICircuitBreaker CircuitBreaker { get { return _circuitBreaker; } }
 
         public CommandMetrics Metrics { get; private set; }
 
@@ -154,9 +162,9 @@ namespace Jellyfish.Commands
                 _currentRequestLog = context.GetRequestLog();
             }
 
-            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasFallBack && Properties.RequestCacheEnabled.Get())
+            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasCacheKey && Properties.RequestCacheEnabled.Get())
             {
-                _requestCache = context.GetCache<T>(CommandName);
+                _requestCache = context.GetCache<CacheItem>(CommandName);
             }
         }
 
@@ -405,19 +413,23 @@ namespace Jellyfish.Commands
                 throw new IllegalStateException("This instance can only be executed once. Please instantiate a new instance.");
             }
 
-            T result;
+            CacheItem cacheItem;
             // get from cache
             if ( _requestCache != null)
             {
                 var key = GetCacheKey();
-                if (key != null && _requestCache.TryGetValue(key, out result))
+                if (key != null && _requestCache.TryGetValue(key, out cacheItem))
                 {
                     Metrics.MarkResponseFromCache();
-                    _executionResult.AddEvent(EventType.RESPONSE_FROM_CACHE);
-                    return result;
+                    _executionResult = cacheItem.ExecutionResult;
+                    _isExecutionComplete = true;
+                    RecordExecutedCommand();
+
+                    return cacheItem.Value;
                 }
             }
 
+            T result;
             long ms;
             var start = _clock.EllapsedTimeInMs;
             try
@@ -495,9 +507,17 @@ namespace Jellyfish.Commands
                             if (_requestCache != null)
                             {
                                 var key = GetCacheKey();
-                                if (key != null && !_requestCache.TryAdd(key, result))
+
+                                cacheItem = new CacheItem { ExecutionResult = new ExecutionResult( _executionResult), Value = result };
+                                cacheItem.ExecutionResult.AddEvent(EventType.RESPONSE_FROM_CACHE);
+                                cacheItem.ExecutionResult.ExecutionTime = -1;
+
+                                if (key != null && !_requestCache.TryAdd(key, cacheItem))
                                 {
-                                    _requestCache.TryGetValue(key, out result);
+                                    _requestCache.TryGetValue(key, out cacheItem);
+                                    _executionResult = cacheItem.ExecutionResult;
+                                    result = cacheItem.Value;
+                                    start = 0;
                                 }
                             }
                             return result;
