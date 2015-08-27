@@ -17,40 +17,40 @@ namespace Jellyfish.Commands
     public abstract class CommandExecutionHook
     {
         /// <summary>
-        /// Invoked before <see cref="ServiceCommandInfo"/> begins executing.
+        /// Invoked before <see cref="ServiceCommand<T>"/> begins executing.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
-        public void OnStart<T>(ServiceCommandInfo commandInstance)
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
+        public virtual void OnStart<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
 
         /// <summary>
-        /// Invoked when <see cref="ServiceCommandInfo"/> emits a value.
+        /// Invoked when <see cref="ServiceCommand<T>"/> emits a value.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
         /// <param name="value">value emitted</param>
-        public T OnEmit<T>(ServiceCommandInfo commandInstance, T value)
-        {
-            return value; //by default, just pass through
-        }
+        //public T OnEmit<T>(ServiceCommand<T> commandInstance, T value)
+        //{
+        //    return value; //by default, just pass through
+        //}
 
         /// <summary>
-        /// Invoked when <see cref="ServiceCommandInfo"/> fails with an Exception.
+        /// Invoked when <see cref="ServiceCommand<T>"/> fails with an Exception.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
         /// <param name="failureType"><see cref="FailureType"/> enum representing which type of error</param>
         /// <param name="e">exception object</param>
-        public Exception OnError<T>(ServiceCommandInfo commandInstance, FailureType failureType, Exception e)
+        public virtual Exception OnError<T>(ServiceCommand<T> commandInstance, FailureType failureType, Exception e)
         {
             return e; //by default, just pass through
         }
 
         /// <summary>
-        /// Invoked when <see cref="ServiceCommandInfo"/> finishes a successful execution.
+        /// Invoked when <see cref="ServiceCommand<T>"/> finishes a successful execution.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
-        public void OnSuccess<T>(ServiceCommandInfo commandInstance)
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
+        public virtual void OnSuccess<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
@@ -59,7 +59,7 @@ namespace Jellyfish.Commands
         /// Invoked at start of thread execution when <see cref="HystrixCommand"/> is executed using {@link ExecutionIsolationStrategy#THREAD}.
         /// </summary>
         /// <param name="commandInstance">The executing HystrixCommand instance.</param>
-        public void OnThreadStart<T>(ServiceCommandInfo commandInstance)
+        public virtual void OnThreadStart<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
@@ -70,95 +70,102 @@ namespace Jellyfish.Commands
         /// encountered a timeout.
         /// </summary>
         /// <param name="commandInstance">The executing HystrixCommand instance.</param>
-        public void OnThreadComplete<T>(ServiceCommandInfo commandInstance)
+        public virtual void OnThreadComplete<T>(ServiceCommand<T> commandInstance)
         {
             // do nothing by default
         }
 
         /// <summary>
-        /// Invoked when the user-defined execution method in <see cref="ServiceCommandInfo"/> starts.
+        /// Invoked when the user-defined execution method in <see cref="ServiceCommand<T>"/> starts.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
-        public void OnExecutionStart<T>(ServiceCommandInfo commandInstance)
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
+        public virtual void OnExecutionStart<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
 
         /// <summary>
-        /// Invoked when the user-defined execution method in <see cref="ServiceCommandInfo"/> emits a value.
+        /// Invoked when the user-defined execution method in <see cref="ServiceCommand<T>"/> emits a value.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
         /// <param name="value">value emitted</param>
-        public T OnExecutionEmit<T>(ServiceCommandInfo commandInstance, T value)
-        {
-            return value; //by default, just pass through
-        }
+        //public T OnExecutionEmit<T>(ServiceCommand<T> commandInstance, T value)
+        //{
+        //    return value; //by default, just pass through
+        //}
 
         /// <summary>
-        /// Invoked when the user-defined execution method in <see cref="ServiceCommandInfo"/> fails with an Exception.
+        /// Invoked when the user-defined execution method in <see cref="ServiceCommand<T>"/> fails with an Exception.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
         /// <param name="e">exception object</param>
-        public Exception OnExecutionError<T>(ServiceCommandInfo commandInstance, Exception e)
+        public virtual Exception OnExecutionError<T>(ServiceCommand<T> commandInstance, Exception e)
         {
             return e; //by default, just pass through
         }
 
         /// <summary>
-        /// Invoked when the user-defined execution method in <see cref="ServiceCommandInfo"/> completes successfully.
+        /// Invoked when the user-defined execution method in <see cref="ServiceCommand<T>"/> completes successfully.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
-        public void OnExecutionSuccess<T>(ServiceCommandInfo commandInstance)
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
+        public virtual void OnExecutionSuccess<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
 
         /// <summary>
-        /// Invoked when the fallback method in <see cref="ServiceCommandInfo"/> starts.
+        /// Invoked when the fallback method in <see cref="ServiceCommand<T>"/> starts.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
-        public void OnFallbackStart<T>(ServiceCommandInfo commandInstance)
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
+        public virtual void OnFallbackStart<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
 
         /// <summary>
-        /// Invoked when the fallback method in <see cref="ServiceCommandInfo"/> emits a value.
+        /// Invoked when the fallback method in <see cref="ServiceCommand<T>"/> emits a value.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
         /// <param name="value">value emitted</param>
-        public T OnFallbackEmit<T>(ServiceCommandInfo commandInstance, T value)
-        {
-            return value; //by default, just pass through
-        }
+        //public T OnFallbackEmit<T>(ServiceCommand<T> commandInstance, T value)
+        //{
+        //    return value; //by default, just pass through
+        //}
 
         /// <summary>
-        /// Invoked when the fallback method in <see cref="ServiceCommandInfo"/> fails with an Exception.
+        /// Invoked when the fallback method in <see cref="ServiceCommand<T>"/> fails with an Exception.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
         /// <param name="e">exception object</param>
-        public Exception OnFallbackError<T>(ServiceCommandInfo commandInstance, Exception e)
+        public virtual Exception OnFallbackError<T>(ServiceCommand<T> commandInstance, Exception e)
         {
             //by default, just pass through
             return e;
         }
 
         /// <summary>
-        /// Invoked when the user-defined execution method in <see cref="ServiceCommandInfo"/> completes successfully.
+        /// Invoked when the user-defined execution method in <see cref="ServiceCommand<T>"/> completes successfully.
         /// </summary>
-        /// <param name="commandInstance">The executing ServiceCommandInfo instance.</param>
-        public void OnFallbackSuccess<T>(ServiceCommandInfo commandInstance)
+        /// <param name="commandInstance">The executing ServiceCommand<T> instance.</param>
+        public virtual void OnFallbackSuccess<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
 
         /// <summary>
-        /// Invoked when the command response is found in the {@link com.netflix.hystrix.HystrixRequestCache}.
+        /// Invoked when the command response is found in the <see cref="com.netflix.hystrix.HystrixRequestCache"/>.
         /// </summary>
         /// <param name="commandInstance">The executing HystrixCommand</param>
-        public void OnCacheHit<T>(ServiceCommandInfo commandInstance)
+        public virtual void OnCacheHit<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
+        }
+    }
+
+    internal class CommandExecutionHookDefault : CommandExecutionHook
+    {
+        public CommandExecutionHookDefault()
+        {
         }
     }
 }

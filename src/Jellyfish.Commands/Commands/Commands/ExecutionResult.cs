@@ -24,6 +24,18 @@ namespace Jellyfish.Commands
         private  int executionTime=-1;
         private  Exception exception;
         private  long commandRunStartTimeInNMs;
+
+        public ExecutionResult()
+        {
+        }
+
+        public ExecutionResult(ExecutionResult copy)
+        {
+            this.executionTime = copy.ExecutionTime;
+            this.commandRunStartTimeInNMs = copy.commandRunStartTimeInNMs;
+            this.events = new List<EventType>( copy.events );
+        }
+
         //private  int numEmissions;
         //private  int numFallbackEmissions;
 

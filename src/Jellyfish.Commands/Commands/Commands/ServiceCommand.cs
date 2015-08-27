@@ -21,6 +21,12 @@ namespace Jellyfish.Commands
 
     public abstract class ServiceCommand<T> : ServiceCommandInfo
     {
+        class CacheItem
+        {
+            public ExecutionResult ExecutionResult;
+            public T Value;
+        }
+
         [Flags]
         protected enum ServiceCommandOptions
         {
@@ -31,7 +37,8 @@ namespace Jellyfish.Commands
             HasCacheKey = 8
         }
 
-        private RequestCache<T> _requestCache;
+        private CommandExecutionHook _executionHook;
+        private RequestCache<CacheItem> _requestCache;
         private RequestLog _currentRequestLog;
         private ServiceCommandOptions _flags;
         private ICircuitBreaker _circuitBreaker;
@@ -48,6 +55,8 @@ namespace Jellyfish.Commands
         private int _started;
         private bool _isExecutedInThread;
         private bool _isExecutionComplete;
+
+        public ICircuitBreaker CircuitBreaker { get { return _circuitBreaker; } }
 
         public CommandMetrics Metrics { get; private set; }
 
@@ -113,12 +122,12 @@ namespace Jellyfish.Commands
         }
 
 
-        protected ServiceCommand(IJellyfishContext context, string commandGroup, string threadPoolKey = null, string commandName = null, ExecutionIsolationStrategy executionPolicy = ExecutionIsolationStrategy.Thread, CommandPropertiesBuilder properties = null)
-            : this( context, commandGroup, commandName, threadPoolKey, executionPolicy, properties, null)
+        protected ServiceCommand(IJellyfishContext context, string commandGroup, string threadPoolKey = null, string commandName = null, ExecutionIsolationStrategy executionPolicy = ExecutionIsolationStrategy.Thread, CommandPropertiesBuilder properties = null, CommandExecutionHook executionHook = null)
+            : this( context, null, commandGroup, commandName, threadPoolKey, executionPolicy, properties)
         {
         }
 
-        internal ServiceCommand(IJellyfishContext context, string commandGroup, string commandName, string threadPoolKey = null, ExecutionIsolationStrategy executionPolicy = ExecutionIsolationStrategy.Thread, CommandPropertiesBuilder properties = null, IClock clock = null, ICircuitBreaker circuitBreaker = null, CommandMetrics metrics = null)
+        internal ServiceCommand(IJellyfishContext context, IClock clock, string commandGroup, string commandName, string threadPoolKey = null, ExecutionIsolationStrategy executionPolicy = ExecutionIsolationStrategy.Thread, CommandPropertiesBuilder properties = null, ICircuitBreaker circuitBreaker = null, CommandMetrics metrics = null, CommandExecutionHook executionHook=null)
         {
             Contract.Requires(context != null);
             if (String.IsNullOrEmpty(commandGroup))
@@ -129,6 +138,8 @@ namespace Jellyfish.Commands
             CommandName = commandName ?? this.GetType().FullName;
             _threadPoolKey = threadPoolKey ?? CommandGroup;
             _executionResult = new ExecutionResult();
+
+            _executionHook = executionHook ?? new CommandExecutionHookDefault();
 
             this._flags = _states.GetOrAdd(CommandName, (n) =>
             {
@@ -158,9 +169,9 @@ namespace Jellyfish.Commands
                 _currentRequestLog = context.GetRequestLog();
             }
 
-            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasFallBack && Properties.RequestCacheEnabled.Get())
+            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasCacheKey && Properties.RequestCacheEnabled.Get())
             {
-                _requestCache = context.GetCache<T>(CommandName);
+                _requestCache = context.GetCache<CacheItem>(CommandName);
             }
         }
 
@@ -409,26 +420,40 @@ namespace Jellyfish.Commands
                 throw new IllegalStateException("This instance can only be executed once. Please instantiate a new instance.");
             }
 
-            T result;
+            CacheItem cacheItem;
             // get from cache
             if ( _requestCache != null)
             {
                 var key = GetCacheKey();
-                if (key != null && _requestCache.TryGetValue(key, out result))
+                if (key != null && _requestCache.TryGetValue(key, out cacheItem))
                 {
                     Metrics.MarkResponseFromCache();
+                    _executionResult = cacheItem.ExecutionResult;
                     _isExecutionComplete = true;
-                    _executionResult.AddEvent(EventType.RESPONSE_FROM_CACHE);
-                    return result;
+                    RecordExecutedCommand();
+                    try
+                    {
+                        _executionHook.OnCacheHit(this);
+                    }
+                    catch (Exception )
+                    {
+                        //logger.warn("Error calling HystrixCommandExecutionHook.onCacheHit", hookEx);
+                    }
+                    return cacheItem.Value;
                 }
             }
 
+            T result;
             long ms;
             var start = _clock.EllapsedTimeInMs;
             try
             {
                 RecordExecutedCommand();
                 Metrics.IncrementConcurrentExecutionCount();
+
+                // mark that we're starting execution on the ExecutionHook
+                // if this hook throws an exception, then a fast-fail occurs with no fallback.  No state is left inconsistent
+                _executionHook.OnStart(this);
 
                 if (_circuitBreaker.AllowRequest) // short circuit closed = OK
                 {
@@ -446,6 +471,12 @@ namespace Jellyfish.Commands
                                 {
                                     _isExecutedInThread = true;
 
+                                    /**
+  * If any of these hooks throw an exception, then it appears as if the actual execution threw an error
+  */
+                                    _executionHook.OnThreadStart(this);
+                                    _executionHook.OnExecutionStart(this);
+
                                     // Run with bulkhead and timeout
                                     var t = await Task.Factory.StartNew(
                                         () => Run(token.Token),
@@ -459,11 +490,22 @@ namespace Jellyfish.Commands
                                     {
                                         throw new OperationCanceledException();
                                     }
+                                    _executionHook.OnThreadComplete(this);
                                 }
                                 else
                                 {
                                     // Simple semaphore
+                                    _executionHook.OnExecutionStart(this);
                                     result = await Run(token.Token).ConfigureAwait(false);
+                                }
+
+                                try
+                                {
+                                    _executionHook.OnExecutionSuccess(this);
+                                }
+                                catch (Exception )
+                                {
+                                   // logger.warn("Error calling HystrixCommandExecutionHook.onExecutionSuccess", hookEx);
                                 }
                             }
                             catch (AggregateException ae)
@@ -488,6 +530,8 @@ namespace Jellyfish.Commands
                             catch (Exception e)
                             { 
                                 ms = _clock.EllapsedTimeInMs - start;
+                                e = _executionHook.OnExecutionError(this, e);
+
                                 return await OnExecutionError(ms, e);
                             }
 
@@ -497,12 +541,29 @@ namespace Jellyfish.Commands
                             _circuitBreaker.MarkSuccess();
                             _executionResult.AddEvent(EventType.SUCCESS);
 
+                            try
+                            {
+                                _executionHook.OnSuccess(this);
+                            }
+                            catch (Exception)
+                            {
+                               // logger.warn("Error calling HystrixCommandExecutionHook.onSuccess", hookEx);
+                            }
+
                             if (_requestCache != null)
                             {
                                 var key = GetCacheKey();
-                                if (key != null && !_requestCache.TryAdd(key, result))
+
+                                cacheItem = new CacheItem { ExecutionResult = new ExecutionResult( _executionResult), Value = result };
+                                cacheItem.ExecutionResult.AddEvent(EventType.RESPONSE_FROM_CACHE);
+                                cacheItem.ExecutionResult.ExecutionTime = -1;
+
+                                if (key != null && !_requestCache.TryAdd(key, cacheItem))
                                 {
-                                    _requestCache.TryGetValue(key, out result);
+                                    _requestCache.TryGetValue(key, out cacheItem);
+                                    _executionResult = cacheItem.ExecutionResult;
+                                    result = cacheItem.Value;
+                                    start = 0;
                                 }
                             }
                             return result;
@@ -545,6 +606,21 @@ namespace Jellyfish.Commands
             if (e is BadRequestException)
             {
                 Metrics.MarkBadRequest(ms);
+                try
+                {
+                    var decorated = _executionHook.OnError(this, FailureType.BAD_REQUEST_EXCEPTION, e);
+                    if (decorated is BadRequestException) { 
+                        e = decorated;
+                    }
+                    else
+                    {
+                     //   logger.warn("ExecutionHook.onError returned an exception that was not an instance of HystrixBadRequestException so will be ignored.", decorated);
+                    }
+                }
+                catch(Exception )
+                {
+                    //logger.warn("Error calling HystrixCommandExecutionHook.onError", hookEx);
+                }
                 throw e;
             }
 
@@ -588,6 +664,8 @@ namespace Jellyfish.Commands
                     throw new CommandRuntimeException(failureType, CommandName, GetLogMessagePrefix() + " " + message + " and encountered unrecoverable error.", ex, null);
                 }
 
+                ex = _executionHook.OnError(this, failureType, ex);
+
                 _executionResult.AddEvent(eventType);
 
                 if ((_flags & ServiceCommandOptions.HasFallBack) != ServiceCommandOptions.HasFallBack || Properties.FallbackEnabled.Get() == false)
@@ -599,13 +677,31 @@ namespace Jellyfish.Commands
                 {
                     try
                     {
+                        _executionHook.OnFallbackStart(this);
                         var fallback = await GetFallback();
+                        try
+                        {
+                            _executionHook.OnFallbackSuccess(this);
+                        }
+                        catch (Exception )
+                        {
+                            //logger.warn("Error calling HystrixCommandExecutionHook.onFallbackSuccess", hookEx);
+                        }
                         Metrics.MarkFallbackSuccess();
                         _executionResult.AddEvent(EventType.FALLBACK_SUCCESS);
                         return fallback;
                     }
                     catch (Exception ex2)
                     {
+                        try
+                        {
+                            ex2 = _executionHook.OnFallbackError(this, ex2);
+                        }
+                        catch (Exception)
+                        {
+                            //logger.warn("Error calling HystrixCommandExecutionHook.onFallbackError", hookEx);
+                        }
+
                         var fe = ex2 is AggregateException ? ((AggregateException)ex2).InnerException : ex2;
                         if (fe is NotImplementedException)
                         {

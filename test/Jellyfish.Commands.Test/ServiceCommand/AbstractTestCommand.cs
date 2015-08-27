@@ -81,8 +81,8 @@ namespace Jellyfish.Commands.Tests
 
         public Action<string> Log { get; internal set; }
 
-        public TestServiceCommand(IJellyfishContext ctx, string name, CommandPropertiesBuilder builder, ExecutionIsolationStrategy strategy = ExecutionIsolationStrategy.Thread, IClock clock=null, TestCircuitBreaker circuitBreaker =null)
-            : base(ctx ?? new MockJellyfishContext(), name, null, null, strategy, builder, clock, circuitBreaker, circuitBreaker?.Metrics)
+        public TestServiceCommand(IJellyfishContext ctx, string name, CommandPropertiesBuilder builder, ExecutionIsolationStrategy strategy = ExecutionIsolationStrategy.Thread, IClock clock=null, TestCircuitBreaker circuitBreaker =null, CommandExecutionHook executionHook=null)
+            : base(ctx ?? new MockJellyfishContext(), clock, name, name, null, strategy, builder, circuitBreaker, circuitBreaker?.Metrics, executionHook:executionHook)
         {
             SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasFallBack, false);
             SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasCacheKey, false);
@@ -120,12 +120,47 @@ namespace Jellyfish.Commands.Tests
         }
     }
 
+    /**
+     * A Command implementation that supports caching.
+     */
+    internal class SuccessfulCacheableCommand<T> : ServiceCommand<T>
+    {
+
+        private bool cacheEnabled;
+        public volatile bool executed = false;
+        private T value;
+
+        public SuccessfulCacheableCommand(IJellyfishContext ctx, TestCircuitBreaker circuitBreaker, bool cacheEnabled, T value) 
+            : base(ctx, circuitBreaker.Clock, "SuccessfulCacheableCommand", null, metrics:circuitBreaker.Metrics, circuitBreaker:circuitBreaker, properties: CommandPropertiesTest.GetUnitTestPropertiesSetter().WithRequestCacheEnabled(true))
+        {
+            this.value = value;
+            this.cacheEnabled = cacheEnabled;
+        }
+
+        protected override Task<T> Run(CancellationToken token)
+        {
+            executed = true;
+            return Task.FromResult(value);
+        }
+
+
+        protected override string GetCacheKey()
+        {
+            if (cacheEnabled)
+                return value.ToString();
+            else
+                return null;
+        }
+    }
+
     static class TestCommandFactory
     {
         public static int EXECUTE_VALUE = 1;
         public static int FALLBACK_VALUE = 11;
 
-        public static TestServiceCommand Get(IJellyfishContext ctx, ITestOutputHelper output, ExecutionIsolationStrategy strategy, ExecutionResult executionResult=ExecutionResult.NONE, FallbackResult fallbackResult = FallbackResult.UNIMPLEMENTED, Action<CommandPropertiesBuilder> setter=null, TestCircuitBreaker circuitBreaker=null, IClock clock=null, [System.Runtime.CompilerServices.CallerMemberName] string commandName=null)
+        public static TestServiceCommand Get(IJellyfishContext ctx, ITestOutputHelper output, string commandName, ExecutionIsolationStrategy strategy, 
+            ExecutionResult executionResult = ExecutionResult.NONE, FallbackResult fallbackResult = FallbackResult.UNIMPLEMENTED, 
+            Action<CommandPropertiesBuilder> setter = null, TestCircuitBreaker circuitBreaker = null, IClock clock = null)
         {
             var builder = CommandPropertiesTest.GetUnitTestPropertiesSetter();
             if (setter != null)
@@ -133,7 +168,7 @@ namespace Jellyfish.Commands.Tests
             if (clock == null)
                 clock = new MockedClock();
 
-            var cmd = new TestServiceCommand(ctx, commandName, builder, strategy, clock, circuitBreaker ?? new TestCircuitBreaker(clock));
+            var cmd = new TestServiceCommand(ctx, commandName, builder, strategy, clock, circuitBreaker ?? new TestCircuitBreaker(clock), new TestExecutionHook(output));
             cmd.Log = msg => output.WriteLine("({0}) - {1}", cmd.Id, msg);
 
             if (executionResult == ExecutionResult.SUCCESS)
@@ -145,15 +180,15 @@ namespace Jellyfish.Commands.Tests
             }
             else if (executionResult == ExecutionResult.FAILURE)
             {
-                
-                cmd.Action = () => { cmd.Log("Execution failure"); ; throw new Exception( "Execution Failure for TestCommand"); };
+
+                cmd.Action = () => { cmd.Log("Execution failure"); ; throw new Exception("Execution Failure for TestCommand"); };
             }
             else if (executionResult == ExecutionResult.HYSTRIX_FAILURE)
-            {                
+            {
                 cmd.Action = () =>
                 {
                     cmd.Log("Execution hystrix failure");
-                    throw new Exception("Execution  Failure for TestCommand",  new Exception("Fallback Failure for TestCommand"));
+                    throw new Exception("Execution  Failure for TestCommand", new Exception("Fallback Failure for TestCommand"));
                 };
             }
             else if (executionResult == ExecutionResult.RECOVERABLE_ERROR)
@@ -190,8 +225,8 @@ namespace Jellyfish.Commands.Tests
                 };
             }
             else if (fallbackResult == FallbackResult.FAILURE)
-            {              
-                cmd.Fallback = () => { cmd.Log("Execution fallback error"); throw new Exception( "Fallback Failure for TestCommand"); };
+            {
+                cmd.Fallback = () => { cmd.Log("Execution fallback error"); throw new Exception("Fallback Failure for TestCommand"); };
             }
             else if (fallbackResult == FallbackResult.UNIMPLEMENTED)
             {
@@ -205,64 +240,87 @@ namespace Jellyfish.Commands.Tests
             return cmd;
         }
 
-    public enum ExecutionResult
+        public enum ExecutionResult
+        {
+            NONE, SUCCESS, FAILURE, ASYNC_FAILURE, HYSTRIX_FAILURE, ASYNC_HYSTRIX_FAILURE, RECOVERABLE_ERROR, ASYNC_RECOVERABLE_ERROR, UNRECOVERABLE_ERROR, ASYNC_UNRECOVERABLE_ERROR, BAD_REQUEST, ASYNC_BAD_REQUEST, MULTIPLE_EMITS_THEN_SUCCESS, MULTIPLE_EMITS_THEN_FAILURE, NO_EMITS_THEN_SUCCESS
+        }
+
+        public enum FallbackResult
+        {
+            UNIMPLEMENTED, SUCCESS, FAILURE, ASYNC_FAILURE, MULTIPLE_EMITS_THEN_SUCCESS, MULTIPLE_EMITS_THEN_FAILURE, NO_EMITS_THEN_SUCCESS
+        }
+    }
+
+    class TestExecutionHook : CommandExecutionHook
     {
-        NONE, SUCCESS, FAILURE, ASYNC_FAILURE, HYSTRIX_FAILURE, ASYNC_HYSTRIX_FAILURE, RECOVERABLE_ERROR, ASYNC_RECOVERABLE_ERROR, UNRECOVERABLE_ERROR, ASYNC_UNRECOVERABLE_ERROR, BAD_REQUEST, ASYNC_BAD_REQUEST, MULTIPLE_EMITS_THEN_SUCCESS, MULTIPLE_EMITS_THEN_FAILURE, NO_EMITS_THEN_SUCCESS
+        private ITestOutputHelper output;
+
+        public TestExecutionHook(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        private void Write<T>(ServiceCommand<T> command, Exception ex=null, [System.Runtime.CompilerServices.CallerMemberName] string method=null)
+        {
+            output.WriteLine("{0} [{1}] - Exception : {2}", command.CommandName, method, ex != null ? ex.GetType().Name : "<none>");
+        }
+
+        public override void OnCacheHit<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
+
+        public override Exception OnError<T>(ServiceCommand<T> commandInstance, FailureType failureType, Exception e)
+        {
+            Write(commandInstance, e);
+            return base.OnError<T>(commandInstance, failureType, e);
+        }
+
+        public override Exception OnExecutionError<T>(ServiceCommand<T> commandInstance, Exception e)
+        {
+            Write(commandInstance, e);
+            return base.OnExecutionError<T>(commandInstance, e);
+        }
+
+        public override void OnExecutionStart<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+            base.OnExecutionStart<T>(commandInstance);
+        }
+
+        public override void OnExecutionSuccess<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
+        public override Exception OnFallbackError<T>(ServiceCommand<T> commandInstance, Exception e)
+        {
+            Write(commandInstance, e);
+            return base.OnFallbackError<T>(commandInstance, e);
+        }
+        public override void OnFallbackStart<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+            base.OnFallbackStart<T>(commandInstance);
+        }
+        public override void OnFallbackSuccess<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
+        public override void OnStart<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
+        public override void OnSuccess<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
+        public override void OnThreadComplete<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
+        public override void OnThreadStart<T>(ServiceCommand<T> commandInstance)
+        {
+            Write(commandInstance);
+        }
     }
-
-    public enum FallbackResult
-    {
-        UNIMPLEMENTED, SUCCESS, FAILURE, ASYNC_FAILURE, MULTIPLE_EMITS_THEN_SUCCESS, MULTIPLE_EMITS_THEN_FAILURE, NO_EMITS_THEN_SUCCESS
-    }
-
-    public enum CacheEnabled
-    {
-        YES, NO
-    }
-
-    //static HystrixPropertiesStrategy TEST_PROPERTIES_FACTORY = new TestPropertiesFactory();
-
-    //static class TestPropertiesFactory : HystrixPropertiesStrategy
-    //{
-
-    //    @Override
-    //    public HystrixCommandProperties getCommandProperties(HystrixCommandKey commandKey, HystrixCommandProperties.Setter builder) {
-    //        if (builder == null)
-    //        {
-    //            builder = HystrixCommandPropertiesTest.getUnitTestPropertiesSetter();
-    //        }
-    //        return HystrixCommandPropertiesTest.asMock(builder);
-    //    }
-
-    //    @Override
-    //    public HystrixThreadPoolProperties getThreadPoolProperties(HystrixThreadPoolKey threadPoolKey, HystrixThreadPoolProperties.Setter builder) {
-    //        if (builder == null)
-    //        {
-    //            builder = HystrixThreadPoolProperties.Setter.getUnitTestPropertiesBuilder();
-    //        }
-    //        return HystrixThreadPoolProperties.Setter.asMock(builder);
-    //    }
-
-    //    @Override
-    //    public HystrixCollapserProperties getCollapserProperties(HystrixCollapserKey collapserKey, HystrixCollapserProperties.Setter builder) {
-    //        throw new IllegalStateException("not expecting collapser properties");
-    //    }
-
-    //    @Override
-    //    public String getCommandPropertiesCacheKey(HystrixCommandKey commandKey, HystrixCommandProperties.Setter builder) {
-    //        return null;
-    //    }
-
-    //    @Override
-    //    public String getThreadPoolPropertiesCacheKey(HystrixThreadPoolKey threadPoolKey, com.netflix.hystrix.HystrixThreadPoolProperties.Setter builder) {
-    //        return null;
-    //    }
-
-    //    @Override
-    //    public String getCollapserPropertiesCacheKey(HystrixCollapserKey collapserKey, com.netflix.hystrix.HystrixCollapserProperties.Setter builder) {
-    //        return null;
-    //    }
-
-    }
-
 }
