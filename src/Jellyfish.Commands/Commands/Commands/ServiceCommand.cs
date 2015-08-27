@@ -24,10 +24,11 @@ namespace Jellyfish.Commands
         [Flags]
         protected enum ServiceCommandOptions
         {
-            ThreadExecutionStrategy = 0,
-            SemaphoreExecutionStrategy = 1,
-            HasFallBack = 2,
-            HasCacheKey = 4
+            None=0,
+            ThreadExecutionStrategy = 1,
+            SemaphoreExecutionStrategy = 2,
+            HasFallBack = 4,
+            HasCacheKey = 8
         }
 
         private RequestCache<T> _requestCache;
@@ -131,15 +132,18 @@ namespace Jellyfish.Commands
 
             this._flags = _states.GetOrAdd(CommandName, (n) =>
             {
-                ServiceCommandOptions flags = ServiceCommandOptions.ThreadExecutionStrategy;
+                ServiceCommandOptions flags = ServiceCommandOptions.None;
                 if (this.IsMethodImplemented("GetFallback"))
                     flags |= ServiceCommandOptions.HasFallBack;
-                if (executionPolicy == ExecutionIsolationStrategy.Semaphore)
-                    flags |= ServiceCommandOptions.SemaphoreExecutionStrategy;
                 if (this.IsMethodImplemented("GetCacheKey"))
                     flags |= ServiceCommandOptions.HasCacheKey;
                 return flags;
             });
+
+            if (executionPolicy == ExecutionIsolationStrategy.Semaphore)
+                _flags |= ServiceCommandOptions.SemaphoreExecutionStrategy;
+            if (executionPolicy == ExecutionIsolationStrategy.Thread)
+                _flags |= ServiceCommandOptions.ThreadExecutionStrategy;
 
             Properties = properties != null ? properties.Build(CommandName) : new CommandProperties(CommandName);
 
@@ -413,6 +417,7 @@ namespace Jellyfish.Commands
                 if (key != null && _requestCache.TryGetValue(key, out result))
                 {
                     Metrics.MarkResponseFromCache();
+                    _isExecutionComplete = true;
                     _executionResult.AddEvent(EventType.RESPONSE_FROM_CACHE);
                     return result;
                 }
@@ -641,6 +646,11 @@ namespace Jellyfish.Commands
             return CommandName;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
         private bool IsUnrecoverable(Exception ex)
         {
             return ex is StackOverflowException || ex is OutOfMemoryException;// || ex is ExecutionEngineException;

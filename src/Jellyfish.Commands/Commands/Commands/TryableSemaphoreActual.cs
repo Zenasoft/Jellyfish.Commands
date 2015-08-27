@@ -48,7 +48,7 @@ namespace Jellyfish.Commands
 
         public override string ToString()
         {
-            return "Max=" + NumberOfPermits.ToString();
+            return "Max=" + NumberOfPermits.Get().ToString();
         }
     }
 }

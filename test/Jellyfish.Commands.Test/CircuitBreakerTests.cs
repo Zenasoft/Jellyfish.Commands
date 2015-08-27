@@ -63,6 +63,11 @@ namespace Jellyfish.Commands.Tests
         }
 
         public IClock Clock { get; internal set; }
+
+        public override string ToString()
+        {
+            return String.Format("TestCircuitBreaker IsOpen={0} Force={1}", IsOpen(), forceShortCircuit);
+        }
     }
 
     public class CircuitBreakerTests

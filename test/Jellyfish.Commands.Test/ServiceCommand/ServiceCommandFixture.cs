@@ -1189,7 +1189,7 @@ namespace Jellyfish.Commands.Tests
             Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.FAILURE));
             Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.BAD_REQUEST));
             Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_REJECTION));
-            Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_FAILURE));
+            Assert.Equal(1, s2.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_FAILURE));
             Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.FALLBACK_SUCCESS));
             Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.SEMAPHORE_REJECTED));
             Assert.Equal(0, s2.Metrics.GetRollingCount(RollingNumberEvent.SHORT_CIRCUITED));
@@ -1234,7 +1234,7 @@ namespace Jellyfish.Commands.Tests
             // single thread should work
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Semaphore, circuitBreaker,
                                 executionResult: TestCommandFactory.ExecutionResult.FAILURE,
-                                fallbackResult: TestCommandFactory.FallbackResult.SUCCESS,
+                                fallbackResult: TestCommandFactory.FallbackResult.SUCCESS, fallbackLatency: 200,
                                 setter: (CommandPropertiesBuilder builder) => builder.WithFallbackIsolationSemaphoreMaxConcurrentRequests(1)
                                                                                      .WithExecutionIsolationThreadInterruptOnTimeout(false));
             try
@@ -1256,7 +1256,7 @@ namespace Jellyfish.Commands.Tests
                 //  Console.WriteLine("c2 start: " + System.currentTimeMillis());
                 command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Semaphore, circuitBreaker,
                       executionResult: TestCommandFactory.ExecutionResult.FAILURE,
-                      fallbackResult: TestCommandFactory.FallbackResult.SUCCESS, fallbackLatency: 200,
+                      fallbackResult: TestCommandFactory.FallbackResult.SUCCESS, fallbackLatency: 800,
                       setter: (CommandPropertiesBuilder builder) => builder.WithFallbackIsolationSemaphoreMaxConcurrentRequests(1)
                                                                            .WithExecutionIsolationThreadInterruptOnTimeout(false));
 
@@ -1393,16 +1393,8 @@ namespace Jellyfish.Commands.Tests
                     fallbackResult: TestCommandFactory.FallbackResult.UNIMPLEMENTED,
                     setter: (CommandPropertiesBuilder builder) => builder.WithFallbackIsolationSemaphoreMaxConcurrentRequests(1));            // single thread should work
 
-            try
-            {
-                Assert.Equal(TestCommandFactory.EXECUTE_VALUE, await command.ExecuteAsync());
-                Assert.False(command.IsExecutedInThread);
-            }
-            catch (Exception)
-            {
-                // we shouldn't fail on this one
-                throw;
-            }
+            Assert.Equal(TestCommandFactory.EXECUTE_VALUE, await command.ExecuteAsync());
+            Assert.False(command.IsExecutedInThread);
 
             var semaphore = new TryableSemaphoreActual(DynamicProperties.Factory.AsProperty(1));
             var tasks = new Task[2];
@@ -1465,7 +1457,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public void testRejectedExecutionSemaphoreWithFallbackViaExecute()
         {
-            TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
+            TestCircuitBreaker circuitBreaker = new TestCircuitBreaker(new MockedClock());
             var ctx = new MockJellyfishContext();
             var tasks = new Task[2];
             var results = new System.Collections.Concurrent.ConcurrentQueue<int>();

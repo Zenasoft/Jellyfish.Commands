@@ -1,38 +1,13 @@
-@echo off
-cd %~dp0
+  
+call dnu restore
 
-SETLOCAL
-SET CACHED_NUGET=%LocalAppData%\NuGet\NuGet.exe
-SET BUILDCMD_KOREBUILD_VERSION=""
-SET BUILDCMD_DNX_VERSION=""
-
-IF EXIST %CACHED_NUGET% goto copynuget
-echo Downloading latest version of NuGet.exe...
-IF NOT EXIST %LocalAppData%\NuGet md %LocalAppData%\NuGet
-@powershell -NoProfile -ExecutionPolicy unrestricted -Command "$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest 'https://www.nuget.org/nuget.exe' -OutFile '%CACHED_NUGET%'"
-
-:copynuget
-IF EXIST .nuget\nuget.exe goto restore
-md .nuget
-copy %CACHED_NUGET% .nuget\nuget.exe > nul
-
-:restore
-IF EXIST packages\KoreBuild goto run
-IF %BUILDCMD_KOREBUILD_VERSION%=="" (
-	.nuget\NuGet.exe install KoreBuild -ExcludeVersion -o packages -nocache -pre
+IF '%Configuration%' == '' (
+  call dnu pack src\Jellyfish.Commands --configuration Release
 ) ELSE (
-	.nuget\NuGet.exe install KoreBuild -version %BUILDCMD_KOREBUILD_VERSION% -ExcludeVersion -o packages -nocache -pre
+  call dnu pack src\Jellyfish.Commands --configuration %Configuration%
 )
-.nuget\NuGet.exe install Sake -version 0.2 -o packages -ExcludeVersion
 
-IF "%SKIP_DNX_INSTALL%"=="1" goto run
-IF %BUILDCMD_DNX_VERSION%=="" (
-	CALL packages\KoreBuild\build\dnvm upgrade -runtime CLR -arch x86
-) ELSE (
-	CALL packages\KoreBuild\build\dnvm install %BUILDCMD_DNX_VERSION% -runtime CLR -arch x86 -a default
-)
-CALL packages\KoreBuild\build\dnvm install default -runtime CoreCLR -arch x86
+cd test\Jellyfish.Commands.test
+call dnx test 
 
-:run
-CALL packages\KoreBuild\build\dnvm use default -runtime CLR -arch x86
-packages\Sake\tools\Sake.exe -I packages\KoreBuild\build -f makefile.shade %*
+cd ..\..
