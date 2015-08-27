@@ -1,13 +1,17 @@
   
-call dnu restore
+CMD /C dnu restore
+if NOT ERRORLEVEL 0 EXIT /B 1
 
 IF '%Configuration%' == '' (
-  call dnu pack src\Jellyfish.Commands --configuration Release
+  CMD /C dnu pack src\Jellyfish.Commands --configuration Release
 ) ELSE (
-  call dnu pack src\Jellyfish.Commands --configuration %Configuration%
+  CMD /C dnu pack src\Jellyfish.Commands --configuration %Configuration%
 )
+if NOT ERRORLEVEL 0 EXIT /B 1
 
 cd test\Jellyfish.Commands.test
-call dnx test 
+CMD /C dnx test 
 
 cd ..\..
+
+if NOT ERRORLEVEL 0 EXIT /B 1
