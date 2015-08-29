@@ -98,7 +98,7 @@ namespace Jellyfish.Commands.Tests
         public void testCurrentConcurrentExecutionCount()
         {
             CommandMetrics metrics = null;
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
 
             int NUM_CMDS = 10;
             Task[] tasks = new Task[NUM_CMDS];

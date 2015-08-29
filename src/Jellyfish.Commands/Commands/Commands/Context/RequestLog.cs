@@ -24,7 +24,7 @@ namespace Jellyfish.Commands
         private Lazy<ConcurrentQueue<ServiceCommandInfo>> allExecutedCommands = new Lazy<ConcurrentQueue<ServiceCommandInfo>>(() => new ConcurrentQueue<ServiceCommandInfo>());
 
         // prevent public instantiation
-        internal RequestLog()
+        public RequestLog()
         {
         }
 

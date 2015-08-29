@@ -16,7 +16,7 @@ namespace Jellyfish.Commands
         public FailureType FailureCause { get; private set; }
         public string CommandName { get; private set; }
 
-        public CommandRuntimeException(FailureType failure, string message, string commandName, Exception ex, Exception fallbackException) : base(message, ex)
+        public CommandRuntimeException(FailureType failure, string commandName, string message, Exception ex, Exception fallbackException) : base(message, ex)
         {
             this.FailureCause = failure;
             this.FallbackException = fallbackException;

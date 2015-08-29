@@ -26,7 +26,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionSuccess()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var command = TestCommandFactory.Get(ctx, output, "testExecutionSuccess", ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS);
 
             Assert.Equal(0, command.Metrics.GetRollingCount(RollingNumberEvent.FAILURE));
@@ -94,7 +94,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionFailureWithNoFallback()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var command = TestCommandFactory.Get(ctx, output, "testExecutionFailureWithNoFallback", ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.HYSTRIX_FAILURE);
 
             try
@@ -145,7 +145,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionFailureWithNoFallback2()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var command = TestCommandFactory.Get(ctx, output, "testExecutionFailureWithNoFallback2", ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.FAILURE);
 
             try
@@ -192,7 +192,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionFailureWithFallback()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var command = TestCommandFactory.Get(ctx, output, "testExecutionFailureWithFallback", ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.FAILURE, TestCommandFactory.FallbackResult.SUCCESS);
 
             try
@@ -235,7 +235,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionFailureWithFallbackFailure()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var command = TestCommandFactory.Get(ctx, output, "testExecutionFailureWithFallbackFailure", ExecutionIsolationStrategy.Thread, 
                 TestCommandFactory.ExecutionResult.FAILURE, TestCommandFactory.FallbackResult.FAILURE);
             try
@@ -296,7 +296,7 @@ namespace Jellyfish.Commands.Tests
         class TestCircuitBreakerReportsOpenIfForcedOpenClass : ServiceCommand<bool>
         {
             public TestCircuitBreakerReportsOpenIfForcedOpenClass(CommandPropertiesBuilder builder)
-                : base(new MockJellyfishContext(), "testCircuitBreakerReportsOpenIfForcedOpen", null, null, ExecutionIsolationStrategy.Thread, builder)
+                : base(new JellyfishContext(), "testCircuitBreakerReportsOpenIfForcedOpen", null, null, ExecutionIsolationStrategy.Thread, builder)
             {
             }
 
@@ -343,7 +343,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testCircuitBreakerTripsAfterFailures()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var clock = new MockedClock();
             var circuitBreaker = new TestCircuitBreaker(clock);
 
@@ -413,7 +413,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testCircuitBreakerAcrossMultipleCommandsButSameCircuitBreaker()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var clock = new MockedClock();
             var circuitBreaker = new TestCircuitBreaker(clock);
             
@@ -486,7 +486,7 @@ namespace Jellyfish.Commands.Tests
         public async void testCircuitBreakerAcrossMultipleCommandsAndDifferentDependency()
         {
             var clock = new MockedClock();
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker circuitBreaker_one = new TestCircuitBreaker(clock);
             TestCircuitBreaker circuitBreaker_two = new TestCircuitBreaker(clock);
             /* fail 3 times, twice on one , once on a different  ... circuit-breaker should NOT open */
@@ -569,7 +569,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionSuccessWithCircuitBreakerDisabled()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var clock = new MockedClock();
             var circuitBreaker = new TestCircuitBreaker(clock);
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
@@ -612,7 +612,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionTimeoutWithNoFallback()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var circuitBreaker = new TestCircuitBreaker(Clock.GetInstance());
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
                 executionResult: TestCommandFactory.ExecutionResult.SUCCESS, executionLatency: 200, 
@@ -667,7 +667,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testSemaphoreExecutionWithTimeout()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var circuitBreaker = new TestCircuitBreaker(Clock.GetInstance());
             var cmd = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Semaphore, circuitBreaker,
                 executionResult: TestCommandFactory.ExecutionResult.SUCCESS, executionLatency: 2000,
@@ -739,7 +739,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionTimeoutWithFallback()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var circuitBreaker = new TestCircuitBreaker(Clock.GetInstance());
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
                 executionResult: TestCommandFactory.ExecutionResult.SUCCESS, executionLatency: 200,
@@ -786,7 +786,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionTimeoutFallbackFailure()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var circuitBreaker = new TestCircuitBreaker(Clock.GetInstance());
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
                 executionResult: TestCommandFactory.ExecutionResult.SUCCESS, executionLatency: 200,
@@ -838,7 +838,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testShortCircuitFallbackCounter()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker().setForceShortCircuit(true);
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
                                     executionResult: TestCommandFactory.ExecutionResult.FAILURE, 
@@ -902,7 +902,7 @@ namespace Jellyfish.Commands.Tests
         private async void testRejectedThreadWithNoFallback()
         { 
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var taskScheduler =  new BulkheadTaskScheduler(1, "test");
             TestServiceCommand command = null;
             Task<int> f=null;
@@ -987,7 +987,7 @@ namespace Jellyfish.Commands.Tests
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
 
             var taskScheduler = new BulkheadTaskScheduler(1, "test");
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             try
             {
                 var command1 = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
@@ -1046,7 +1046,7 @@ namespace Jellyfish.Commands.Tests
         public async void testRejectedThreadWithFallbackFailure()
         {
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var taskScheduler = new BulkheadTaskScheduler(1, "test");
 
             try
@@ -1106,7 +1106,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public void testTimedOutCommandDoesNotExecute()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker s1 = new TestCircuitBreaker(new MockedClock());
             TestCircuitBreaker s2 = new TestCircuitBreaker(new MockedClock());
 
@@ -1207,7 +1207,7 @@ namespace Jellyfish.Commands.Tests
         public async void testDisabledTimeoutWorks()
         {
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Thread, circuitBreaker,
                         executionResult: TestCommandFactory.ExecutionResult.SUCCESS, executionLatency: 900,
                         fallbackResult: TestCommandFactory.FallbackResult.SUCCESS,
@@ -1229,7 +1229,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testFallbackSemaphore()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker(new MockedClock());
             // single thread should work
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Semaphore, circuitBreaker,
@@ -1311,7 +1311,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionSemaphoreWithQueue()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
             // single thread should work
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Semaphore, circuitBreaker,
@@ -1385,7 +1385,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testExecutionSemaphoreWithExecution()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
             // single thread should work
             var command = getSharedCircuitBreakerCommand(ctx, ExecutionIsolationStrategy.Semaphore, circuitBreaker,
@@ -1458,7 +1458,7 @@ namespace Jellyfish.Commands.Tests
         public void testRejectedExecutionSemaphoreWithFallbackViaExecute()
         {
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker(new MockedClock());
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             var tasks = new Task[2];
             var results = new System.Collections.Concurrent.ConcurrentQueue<int>();
 
@@ -1645,7 +1645,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testDistinctCircuitBreakers()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             try
             {
                 var command1 = TestCommandFactory.Get(ctx, output, "testDistinctCircuitBreakers1", ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS);
@@ -1665,7 +1665,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testSameCircuitBreakers()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             try
             {
                 var command1 = TestCommandFactory.Get(ctx, output, "testSameCircuitBreakers", ExecutionIsolationStrategy.Thread, TestCommandFactory.ExecutionResult.SUCCESS );
@@ -1688,7 +1688,7 @@ namespace Jellyfish.Commands.Tests
         [Fact]
         public async void testRequestCache1()
         {
-            var ctx = new MockJellyfishContext();
+            var ctx = new JellyfishContext();
             TestCircuitBreaker circuitBreaker = new TestCircuitBreaker(new MockedClock());
             SuccessfulCacheableCommand<String> command1 = new SuccessfulCacheableCommand<string>(ctx, circuitBreaker, true, "A");
             SuccessfulCacheableCommand<String> command2 = new SuccessfulCacheableCommand<string>(ctx, circuitBreaker, true, "A");

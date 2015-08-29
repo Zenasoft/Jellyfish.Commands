@@ -9,14 +9,6 @@ using System.Globalization;
 
 namespace Jellyfish.Commands.Metrics.Publishers
 {
-    public class JsonMetricsPublisherCommandFactory : IMetricsPublisherCommandFactory
-    {
-        public IMetricsPublisherCommand Create(string commandName, CommandMetrics metrics, ICircuitBreaker circuitBreaker, CommandProperties properties)
-        {
-            return new JsonMetricsPublisherCommand(commandName, metrics, circuitBreaker, properties);
-        }
-    }
-
     public class JsonMetricsPublisherCommand : IMetricsPublisherCommand
     {
         private ICircuitBreaker circuitBreaker;
@@ -24,12 +16,12 @@ namespace Jellyfish.Commands.Metrics.Publishers
         private CommandMetrics metrics;
         private CommandProperties properties;
 
-        public JsonMetricsPublisherCommand(string commandName, CommandMetrics metrics, ICircuitBreaker circuitBreaker, CommandProperties properties)
+        public JsonMetricsPublisherCommand(CommandMetrics metrics, ICircuitBreaker circuitBreaker=null)
         {
-            this.commandName = commandName;
+            this.commandName = metrics.CommandName;
             this.metrics = metrics;
-            this.circuitBreaker = circuitBreaker;
-            this.properties = properties;
+            this.circuitBreaker = circuitBreaker ?? CircuitBreaker.CircuitBreakerFactory.GetInstance(commandName);
+            this.properties = metrics.Properties;
         }
 
         /// <summary>
@@ -130,7 +122,7 @@ namespace Jellyfish.Commands.Metrics.Publishers
 
         private String GetCommandJson(CommandMetrics commandMetrics)
         {
-            var circuitBreaker = CircuitBreakerFactory.GetInstance(commandMetrics.CommandName);
+            var circuitBreaker = this.circuitBreaker ?? CircuitBreakerFactory.GetInstance(commandMetrics.CommandName);
 
             var sb = new StringBuilder(1024);
             StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);

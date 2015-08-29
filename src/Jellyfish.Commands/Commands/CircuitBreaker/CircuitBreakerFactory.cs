@@ -9,15 +9,16 @@ using System.Diagnostics.Contracts;
 
 namespace Jellyfish.Commands.CircuitBreaker
 {
-    internal class CircuitBreakerFactory
+    public class CircuitBreakerFactory
     {
-        public static ConcurrentDictionary<string, ICircuitBreaker> _metrics = new ConcurrentDictionary<string, ICircuitBreaker>();
+        private static ConcurrentDictionary<string, ICircuitBreaker> _metrics = new ConcurrentDictionary<string, ICircuitBreaker>();
 
-        internal static ICircuitBreaker GetInstance(string name)
+        public static ICircuitBreaker GetInstance(string name)
         {
             Contract.Assert(!String.IsNullOrEmpty(name));
-
-            return _metrics[name];
+            ICircuitBreaker value;
+            _metrics.TryGetValue(name, out value);
+            return value;
         }
 
         internal static ICircuitBreaker GetOrCreateInstance(string name, CommandProperties properties, CommandMetrics metrics, IClock clock)

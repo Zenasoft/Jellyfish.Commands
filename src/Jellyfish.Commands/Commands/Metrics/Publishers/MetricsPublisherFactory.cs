@@ -11,35 +11,20 @@ namespace Jellyfish.Commands.Metrics.Publishers
 {
     public class MetricsPublisherFactory
     {
-        public static MetricsPublisherFactory Instance { get; } = new MetricsPublisherFactory();
-
         private ConcurrentDictionary<string, IMetricsPublisherCommand> _commandPublishers = new ConcurrentDictionary<string, IMetricsPublisherCommand>();
-        private Dictionary<string, IMetricsPublisherCommandFactory> _commandPublisherFactories = new Dictionary<string, IMetricsPublisherCommandFactory>();
+        private IJellyfishContext _context;
 
-        private MetricsPublisherFactory()
+        internal MetricsPublisherFactory(IJellyfishContext context)
         {
+            _context = context;
         }
 
-        public void AddFactory(string name, IMetricsPublisherCommandFactory factory)
+        public IMetricsPublisherCommand CreateOrRetrievePublisherForCommand(string commandName, CommandMetrics metrics, ICircuitBreaker circuitBreaker)
         {
-            Contract.Assert(!String.IsNullOrEmpty(name));
-            Contract.Assert(factory != null);
-            _commandPublisherFactories.Add(name, factory);
+            return GetOrCreatePublisherForCommand(commandName, metrics, circuitBreaker);
         }
 
-        public static IMetricsPublisherCommand CreateOrRetrievePublisherForCommand(string commandName, CommandMetrics metrics, ICircuitBreaker circuitBreaker, CommandProperties properties)
-        {
-            return MetricsPublisherFactory.Instance.GetOrCreatePublisherForCommand(commandName, metrics, circuitBreaker, properties);
-        }
-
-        public IMetricsPublisherCommand GetPublisherForCommand(string commandName)
-        {
-            IMetricsPublisherCommand publisher;
-            _commandPublishers.TryGetValue(commandName, out publisher);
-            return publisher;
-        }
-
-        private IMetricsPublisherCommand GetOrCreatePublisherForCommand(string commandName, CommandMetrics metrics, ICircuitBreaker circuitBreaker, CommandProperties properties)
+        private IMetricsPublisherCommand GetOrCreatePublisherForCommand(string commandName, CommandMetrics metrics, ICircuitBreaker circuitBreaker)
         {
             // attempt to retrieve from cache first
             IMetricsPublisherCommand publisher;
@@ -49,12 +34,17 @@ namespace Jellyfish.Commands.Metrics.Publishers
             }
 
             // it doesn't exist so we need to create it
-            IMetricsPublisherCommandFactory factory;
-            if (!_commandPublisherFactories.TryGetValue(commandName, out factory))
-                return null;
+            publisher = _context.GetService<IMetricsPublisherCommand>() ?? new DefaultPublisherCommand();
 
             // attempt to store it (race other threads)
-            return _commandPublishers.GetOrAdd(commandName, factory.Create(commandName, metrics, circuitBreaker, properties));
+            return _commandPublishers.GetOrAdd(commandName, publisher);
+        }
+    }
+
+    internal class DefaultPublisherCommand : IMetricsPublisherCommand
+    {
+        public void Run(Action<string> handler)
+        {
         }
     }
 }

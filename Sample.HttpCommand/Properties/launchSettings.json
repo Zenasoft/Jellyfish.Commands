@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "api/values/Jellyfish.Commands",
+      "environmentVariables": {
+        "ASPNET_ENV": "Development"
+      }
+    }
+  }
+}

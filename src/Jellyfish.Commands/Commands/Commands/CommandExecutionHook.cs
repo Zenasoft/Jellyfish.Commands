@@ -14,7 +14,7 @@ namespace Jellyfish.Commands
      /// A single implementation of this class will be used globally so methods on this class will be invoked concurrently from multiple threads so all functionality must be thread-safe.
      /// 
      /// /// </summary>
-    public abstract class CommandExecutionHook
+    public abstract class CommandExecutionHook : ICommandExecutionHook
     {
         /// <summary>
         /// Invoked before <see cref="ServiceCommand<T>"/> begins executing.

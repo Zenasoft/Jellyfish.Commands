@@ -37,7 +37,7 @@ namespace Jellyfish.Commands
             HasCacheKey = 8
         }
 
-        private CommandExecutionHook _executionHook;
+        private ICommandExecutionHook _executionHook;
         private RequestCache<CacheItem> _requestCache;
         private RequestLog _currentRequestLog;
         private ServiceCommandOptions _flags;
@@ -139,7 +139,7 @@ namespace Jellyfish.Commands
             _threadPoolKey = threadPoolKey ?? CommandGroup;
             _executionResult = new ExecutionResult();
 
-            _executionHook = executionHook ?? new CommandExecutionHookDefault();
+            _executionHook = executionHook ?? context.CommandExecutionHook;
 
             this._flags = _states.GetOrAdd(CommandName, (n) =>
             {
@@ -162,7 +162,7 @@ namespace Jellyfish.Commands
 
             _circuitBreaker = circuitBreaker ?? (Properties.CircuitBreakerEnabled.Get() ? CircuitBreakerFactory.GetOrCreateInstance(CommandName, Properties, Metrics, _clock) : new NoOpCircuitBreaker());
 
-            Jellyfish.Commands.Metrics.Publishers.MetricsPublisherFactory.CreateOrRetrievePublisherForCommand(CommandGroup, Metrics, _circuitBreaker, Properties);
+            context.MetricsPublisher.CreateOrRetrievePublisherForCommand(CommandGroup, Metrics, _circuitBreaker);
 
             if (Properties.RequestLogEnabled.Get())
             {

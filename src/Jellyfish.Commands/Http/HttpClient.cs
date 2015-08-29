@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Jellyfish.Commands.Http
@@ -25,19 +26,19 @@ namespace Jellyfish.Commands.Http
         private IEnumerable<HttpClientHandler> _handlers;
         private HttpMethod _method = HttpMethod.Get;
         private string _content;
-        private string _path;
         private IDictionary<string, string> _requestHeaders;
         private TimeSpan _timeout;
+        private string _contentType;
 
         private HttpClientBuilder(Uri uri, string version, string correlationId)
         {
             _uri = uri;
             _version = version;
             _timeout = TimeSpan.FromSeconds(1);
-            SetHeader(RequestIdHeader, correlationId!=null?correlationId: Guid.NewGuid().ToString("G"));
+            SetHeader(RequestIdHeader, correlationId!=null?correlationId: Guid.NewGuid().ToString("N"));
         }
 
-        public static HttpClientBuilder Create(string correlationId, int port, string version = null)
+        public static HttpClientBuilder Create(int port, string correlationId=null, string version = null)
         {
             Contract.Assert(port > 1024);
 
@@ -49,6 +50,13 @@ namespace Jellyfish.Commands.Http
             Contract.Assert(uri != null);
 
             return new HttpClientBuilder(uri, version, correlationId);
+        }
+
+        public HttpClientBuilder WithContentType(string contentType)
+        {
+            Contract.Assert(!String.IsNullOrEmpty(contentType));
+            _contentType = contentType;
+            return this;
         }
 
         public HttpClientBuilder WithHandlers(IEnumerable<HttpClientHandler> handlers)
@@ -70,13 +78,6 @@ namespace Jellyfish.Commands.Http
             return this;
         }
 
-        public HttpClientBuilder SetPath(string path)
-        {
-            Contract.Assert(path != null);
-            _path = path;
-            return this;
-        }
-
         public HttpClientBuilder SetContent(string content)
         {
             Contract.Assert(content != null);
@@ -94,10 +95,18 @@ namespace Jellyfish.Commands.Http
             return this;
         }
 
-        public async Task<ServiceHttpResponse> ExecuteAsync()
+        public async Task<ServiceHttpResponse> ExecuteAsync(string path, CancellationToken token)
         {
+            Contract.Requires(!String.IsNullOrEmpty(path));
+
             var req = new ServiceHttpClient(_uri, _version, _handlers, _timeout);
-            return await req.RequestAsync(_method, _path, _content, true, _requestHeaders);
+            return await req.RequestAsync(token, _method, path, _content, true, _requestHeaders, _contentType);
+        }
+
+        public async Task<T> ExecuteAsync<T>(string path, CancellationToken token)
+        {
+            var result = await ExecuteAsync(path, token);
+            return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(result.Content);
         }
     }
 
@@ -173,47 +182,51 @@ namespace Jellyfish.Commands.Http
         /// <returns>
         /// The content of the response as a string.
         /// </returns>
-        public async Task<ServiceHttpResponse> RequestAsync(HttpMethod method,
+        public async Task<ServiceHttpResponse> RequestAsync(CancellationToken token, HttpMethod method,
                                                         string uriPathAndQuery,
                                                         string content = null,
                                                         bool ensureResponseContent = true,
-                                                        IDictionary<string, string> requestHeaders = null)
+                                                        IDictionary<string, string> requestHeaders = null,
+                                                        string contentType=null)
         {
             Debug.Assert(method != null);
             Debug.Assert(!string.IsNullOrEmpty(uriPathAndQuery));
 
             // Create the request
             HttpContent httpContent = CreateHttpContent(content);
-            HttpRequestMessage request = this.CreateHttpRequestMessage(method, uriPathAndQuery, requestHeaders, httpContent);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(RequestJsonContentType));
-
-            // Get the response
-            HttpClient client = this._client;
-            HttpResponseMessage response = await this.SendRequestAsync(client, request, ensureResponseContent);
-            string responseContent = await GetResponseContent(response);
-            string etag = null;
-            if (response.Headers.ETag != null)
+            using (HttpRequestMessage request = this.CreateHttpRequestMessage(method, uriPathAndQuery, requestHeaders, httpContent))
             {
-                etag = response.Headers.ETag.Tag;
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(contentType ?? RequestJsonContentType));
+
+                // Get the response
+                HttpClient client = this._client;
+                using (HttpResponseMessage response = await this.SendRequestAsync(token, client, request, ensureResponseContent))
+                {
+                    string responseContent = await GetResponseContent(response);
+                    string etag = null;
+                    if (response.Headers.ETag != null)
+                    {
+                        etag = response.Headers.ETag.Tag;
+                    }
+
+                    LinkHeaderValue link = null;
+                    if (response.Headers.Contains("Link"))
+                    {
+                        link = LinkHeaderValue.Parse(response.Headers.GetValues("Link").FirstOrDefault());
+                    }
+
+                    string correlationId = null;
+                    if (response.Headers.Contains(HttpClientBuilder.RequestIdHeader))
+                    {
+                        correlationId = response.Headers.GetValues(HttpClientBuilder.RequestIdHeader).FirstOrDefault();
+                    }
+
+
+                    return new ServiceHttpResponse(responseContent, etag, link, correlationId);
+
+                    // Dispose of the request and response
+                }
             }
-
-            LinkHeaderValue link = null;
-            if (response.Headers.Contains("Link"))
-            {
-                link = LinkHeaderValue.Parse(response.Headers.GetValues("Link").FirstOrDefault());
-            }
-
-            string correlationId = null;
-            if (response.Headers.Contains(HttpClientBuilder.RequestIdHeader))
-            {
-                correlationId = response.Headers.GetValues(HttpClientBuilder.RequestIdHeader).FirstOrDefault();
-            }
-
-            // Dispose of the request and response
-            request.Dispose();
-            response.Dispose();
-
-            return new ServiceHttpResponse(responseContent, etag, link, correlationId);
         }
 
         /// <summary>
@@ -266,7 +279,7 @@ namespace Jellyfish.Commands.Http
 
             // Set the Uri and Http Method
             var path = _pathPrefix != null ? _pathPrefix + uriPathAndQuery : uriPathAndQuery;
-            request.RequestUri = new Uri(this._serviceUri, path);
+            request.RequestUri = new Uri(this._serviceUri, path.TrimStart('/'));
             request.Method = method;
 
             // Add the user's headers
@@ -304,7 +317,7 @@ namespace Jellyfish.Commands.Http
         /// <returns>
         /// An <see cref="HttpResponseMessage"/>.
         /// </returns>
-        private async Task<HttpResponseMessage> SendRequestAsync(HttpClient client, HttpRequestMessage request, bool ensureResponseContent)
+        private async Task<HttpResponseMessage> SendRequestAsync(CancellationToken token, HttpClient client, HttpRequestMessage request, bool ensureResponseContent)
         {
             Debug.Assert(client != null);
             Debug.Assert(request != null);
@@ -312,7 +325,7 @@ namespace Jellyfish.Commands.Http
            // Console.WriteLine("Send request : " + request.RequestUri.ToString());
 
             // Send the request and get the response back as string
-            HttpResponseMessage response = await client.SendAsync(request);
+            HttpResponseMessage response = await client.SendAsync(request, token);
 
             // Throw errors for any failing responses
             if (!response.IsSuccessStatusCode)

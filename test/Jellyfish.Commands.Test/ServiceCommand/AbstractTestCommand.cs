@@ -82,7 +82,7 @@ namespace Jellyfish.Commands.Tests
         public Action<string> Log { get; internal set; }
 
         public TestServiceCommand(IJellyfishContext ctx, string name, CommandPropertiesBuilder builder, ExecutionIsolationStrategy strategy = ExecutionIsolationStrategy.Thread, IClock clock=null, TestCircuitBreaker circuitBreaker =null, CommandExecutionHook executionHook=null)
-            : base(ctx ?? new MockJellyfishContext(), clock, name, name, null, strategy, builder, circuitBreaker, circuitBreaker?.Metrics, executionHook:executionHook)
+            : base(ctx ?? new JellyfishContext(), clock, name, name, null, strategy, builder, circuitBreaker, circuitBreaker?.Metrics, executionHook:executionHook)
         {
             SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasFallBack, false);
             SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasCacheKey, false);
