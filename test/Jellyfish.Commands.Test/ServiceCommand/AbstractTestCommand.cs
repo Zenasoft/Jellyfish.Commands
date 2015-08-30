@@ -81,8 +81,8 @@ namespace Jellyfish.Commands.Tests
 
         public Action<string> Log { get; internal set; }
 
-        public TestServiceCommand(IJellyfishContext ctx, string name, CommandPropertiesBuilder builder, ExecutionIsolationStrategy strategy = ExecutionIsolationStrategy.Thread, IClock clock=null, TestCircuitBreaker circuitBreaker =null, CommandExecutionHook executionHook=null)
-            : base(ctx ?? new JellyfishContext(), clock, name, name, null, strategy, builder, circuitBreaker, circuitBreaker?.Metrics, executionHook:executionHook)
+        public TestServiceCommand(IJellyfishContext ctx, string name, CommandPropertiesBuilder builder, IClock clock=null, TestCircuitBreaker circuitBreaker =null, CommandExecutionHook executionHook=null)
+            : base(ctx ?? new JellyfishContext(), clock, name, name, null, builder, circuitBreaker, circuitBreaker?.Metrics, executionHook:executionHook)
         {
             SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasFallBack, false);
             SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasCacheKey, false);
@@ -163,12 +163,13 @@ namespace Jellyfish.Commands.Tests
             Action<CommandPropertiesBuilder> setter = null, TestCircuitBreaker circuitBreaker = null, IClock clock = null)
         {
             var builder = CommandPropertiesTest.GetUnitTestPropertiesSetter();
+            builder.WithExecutionIsolationStrategy( strategy );
             if (setter != null)
                 setter(builder);
             if (clock == null)
                 clock = new MockedClock();
 
-            var cmd = new TestServiceCommand(ctx, commandName, builder, strategy, clock, circuitBreaker ?? new TestCircuitBreaker(clock), new TestExecutionHook(output));
+            var cmd = new TestServiceCommand(ctx, commandName, builder, clock, circuitBreaker ?? new TestCircuitBreaker(clock), new TestExecutionHook(output));
             cmd.Log = msg => output.WriteLine("({0}) - {1}", cmd.Id, msg);
 
             if (executionResult == ExecutionResult.SUCCESS)
@@ -187,7 +188,7 @@ namespace Jellyfish.Commands.Tests
             {
                 cmd.Action = () =>
                 {
-                    cmd.Log("Execution hystrix failure");
+                    cmd.Log("Execution failure");
                     throw new Exception("Execution  Failure for TestCommand", new Exception("Fallback Failure for TestCommand"));
                 };
             }

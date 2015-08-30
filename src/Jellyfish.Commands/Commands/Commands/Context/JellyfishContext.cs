@@ -30,6 +30,12 @@ namespace Jellyfish.Commands
             _commandExecutionHook = GetService<ICommandExecutionHook>() ??  new CommandExecutionHookDefault();
         }
 
+        public void Reset()
+        {
+            Metrics.CommandMetricsFactory.Reset();
+            CircuitBreaker.CircuitBreakerFactory.Reset();
+        }
+
         public RequestLog GetRequestLog()
         {
             return _requestLog;

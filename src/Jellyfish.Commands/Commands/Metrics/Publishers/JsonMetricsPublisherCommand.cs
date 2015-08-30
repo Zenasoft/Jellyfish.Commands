@@ -90,13 +90,13 @@ namespace Jellyfish.Commands.Metrics.Publishers
         {
             try
             {
-                foreach (var commandMetrics in CommandMetrics.GetInstances())
+                foreach (var commandMetrics in CommandMetricsFactory.GetInstances())
                 {
-                    var jsonString = GetCommandJson(commandMetrics.Metrics);
+                    var jsonString = GetCommandJson(commandMetrics);
                     handler(jsonString);
                 }
 
-                //for (HystrixCollapserMetrics collapserMetrics : HystrixCollapserMetrics.getInstances())
+                //foreach (var collapserMetrics in CollapserMetrics.getInstances())
                 //{
                 //    String jsonString = getCollapserJson(collapserMetrics);
                 //    listener.handleJsonMetric(jsonString);
@@ -120,7 +120,7 @@ namespace Jellyfish.Commands.Metrics.Publishers
             var json = new JsonWriter(sw);
 
             json.writeStartObject();
-            json.writeStringField("type", "HystrixCommand");
+            json.writeStringField("type", "ServiceCommand");
             json.writeStringField("name", commandMetrics.CommandName);
             json.writeStringField("group", commandMetrics.CommandGroup);
             json.writeNumberField("currentTime", DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond); // TODO check this

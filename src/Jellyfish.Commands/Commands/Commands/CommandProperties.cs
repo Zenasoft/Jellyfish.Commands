@@ -35,6 +35,7 @@ namespace Jellyfish.Commands
         internal const int default_metricsRollingPercentileWindowBuckets = 6; // default to 6 buckets (10 seconds each in 60 second window) 
         internal const int default_metricsRollingPercentileBucketSize = 100; // default to 100 values max per bucket 
         internal const int default_metricsHealthSnapshotIntervalInMilliseconds = 500; // default to 500ms as max frequency between allowing snapshots of health (error percentage etc) 
+        internal const ExecutionIsolationStrategy default_executionIsolationStratgey = Jellyfish.Commands.ExecutionIsolationStrategy.Thread;
 
         /// <summary>
         /// If true the <see cref="circuitBreaker.AllowRequest"/> will always return true to allow requests regardless of the error percentage from <see cref="CommandMetrics.GetHealthCounts"/>.
@@ -91,6 +92,8 @@ namespace Jellyfish.Commands
         ///  <p>
         /// </summary> 
         public IDynamicProperty<int> ExecutionTimeoutInMilliseconds { get; private set; }
+
+        public IDynamicProperty<ExecutionIsolationStrategy> ExecutionIsolationStrategy { get; private set; }
 
         /// <summary>
         ///  Whether to use a <see cref="circuitBreaker"/> or not. If false no circuit-breaker logic will be used and all requests permitted.
@@ -196,6 +199,7 @@ namespace Jellyfish.Commands
             MetricsHealthSnapshotIntervalInMilliseconds = this.Get<int>("metrics.healthSnapshot.intervalInMilliseconds", default_metricsHealthSnapshotIntervalInMilliseconds);
             FallbackEnabled = this.Get<bool>("fallback.enabled", default_fallbackEnabled);
             ExecutionTimeoutEnabled = this.Get<bool>("execution.timeout.enabled", default_executionTimeoutEnabled);
+            ExecutionIsolationStrategy = this.Get<ExecutionIsolationStrategy>("execution.isolation.strategy", default_executionIsolationStratgey);
         }
     }
 
@@ -208,7 +212,7 @@ namespace Jellyfish.Commands
         public int? circuitBreakerRequestVolumeThreshold { get; private set; } = null; 
         public int? circuitBreakerSleepWindowInMilliseconds { get; private set; } = null; 
         public int? executionIsolationSemaphoreMaxConcurrentRequests { get; private set; } = null; 
-     //   public ExecutionIsolationStrategy executionIsolationStrategy { get; private set; } = null; 
+        public ExecutionIsolationStrategy? executionIsolationStrategy { get; private set; } = null; 
         public bool? executionIsolationThreadInterruptOnTimeout { get; private set; } = null; 
         public int? executionTimeoutInMilliseconds { get; private set; } = null; 
         public bool? executionTimeoutEnabled { get; private set; } = null; 
@@ -243,9 +247,7 @@ namespace Jellyfish.Commands
 
             if( executionIsolationSemaphoreMaxConcurrentRequests.HasValue ) cmd.ExecutionIsolationSemaphoreMaxConcurrentRequests.Set(executionIsolationSemaphoreMaxConcurrentRequests.Value);
 
-
- //           if( executionIsolationStrategy.HasValue ) cmd.executionIsolationStrategy.Set(executionIsolationStrategy.Value);
-
+            if( executionIsolationStrategy.HasValue ) cmd.ExecutionIsolationStrategy.Set(executionIsolationStrategy.Value);
 
  //           if( executionIsolationThreadInterruptOnTimeout.HasValue ) cmd.executionIsolationThreadInterruptOnTimeout.Set(executionIsolationThreadInterruptOnTimeout.Value);
 
@@ -334,11 +336,11 @@ namespace Jellyfish.Commands
             return this;
         }
 
-        //public CommandPropertiesBuilder WithExecutionIsolationStrategy(ExecutionIsolationStrategy value)
-        //{
-        //    this.executionIsolationStrategy = value;
-        //    return this;
-        //}
+        public CommandPropertiesBuilder WithExecutionIsolationStrategy(ExecutionIsolationStrategy value)
+        {
+            this.executionIsolationStrategy = value;
+            return this;
+        }
 
         public CommandPropertiesBuilder WithExecutionIsolationThreadInterruptOnTimeout(bool? value)
         {

@@ -9,13 +9,20 @@ using Jellyfish.Configuration;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http;
+using Jellyfish.Commands;
 
 namespace Microsoft.Framework.DependencyInjection 
 {
     public static class JellyfishExtensions {    
-        public static void UseJellyfish(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseJellyfish(this IApplicationBuilder builder)
         {
             builder.UseMiddleware<Sample.HttpCommand.Controllers.EventStreamHandler>();
+            return builder;
+        }
+
+        public static void AddJellyfish(this IServiceCollection services)
+        {
+            services.AddScoped<IJellyfishContext, JellyfishContext>();
         }
     }
 }
@@ -125,11 +132,11 @@ namespace Sample.HttpCommand.Controllers
             {
                 while (!token.IsCancellationRequested)
                 {
-                    foreach (var entry in Jellyfish.Commands.Metrics.CommandMetrics.GetInstances())
+                    foreach (var entry in Jellyfish.Commands.Metrics.CommandMetricsFactory.GetInstances())
                     {
                         try
                         {
-                            var publisher = new Jellyfish.Commands.Metrics.Publishers.JsonMetricsPublisherCommand(entry.Metrics);
+                            var publisher = new Jellyfish.Commands.Metrics.Publishers.JsonMetricsPublisherCommand(entry);
                             publisher.Run(UpdateEvent);
                         }
                         catch { }

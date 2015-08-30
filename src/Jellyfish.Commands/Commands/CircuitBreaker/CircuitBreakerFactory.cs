@@ -6,18 +6,24 @@ using Jellyfish.Commands.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.Contracts;
+using System.Threading;
 
 namespace Jellyfish.Commands.CircuitBreaker
 {
-    public class CircuitBreakerFactory
+    public static class CircuitBreakerFactory
     {
-        private static ConcurrentDictionary<string, ICircuitBreaker> _metrics = new ConcurrentDictionary<string, ICircuitBreaker>();
+        private static ConcurrentDictionary<string, ICircuitBreaker> _circuitBreakers = new ConcurrentDictionary<string, ICircuitBreaker>();
+
+        internal static void Reset()
+        {
+            Interlocked.Exchange(ref _circuitBreakers, new ConcurrentDictionary<string, ICircuitBreaker>());
+        }
 
         public static ICircuitBreaker GetInstance(string name)
         {
             Contract.Assert(!String.IsNullOrEmpty(name));
             ICircuitBreaker value;
-            _metrics.TryGetValue(name, out value);
+            _circuitBreakers.TryGetValue(name, out value);
             return value;
         }
 
@@ -28,7 +34,7 @@ namespace Jellyfish.Commands.CircuitBreaker
             Contract.Assert(metrics != null);
             Contract.Assert(clock != null);
 
-            return _metrics.GetOrAdd(name, n => new DefaultCircuitBreaker(properties, metrics, clock));
+            return _circuitBreakers.GetOrAdd(name, n => new DefaultCircuitBreaker(properties, metrics, clock));
         }
     }
 }

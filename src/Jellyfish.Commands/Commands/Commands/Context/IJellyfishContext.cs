@@ -10,7 +10,7 @@ namespace Jellyfish.Commands
     {
         ICommandExecutionHook CommandExecutionHook { get; }
         MetricsPublisherFactory MetricsPublisher { get; }
-
+        void Reset();
         RequestCache<T> GetCache<T>(string commandName);
         RequestLog GetRequestLog();
         T GetService<T>();

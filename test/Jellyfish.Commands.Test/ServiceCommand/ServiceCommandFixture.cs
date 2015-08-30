@@ -296,7 +296,7 @@ namespace Jellyfish.Commands.Tests
         class TestCircuitBreakerReportsOpenIfForcedOpenClass : ServiceCommand<bool>
         {
             public TestCircuitBreakerReportsOpenIfForcedOpenClass(CommandPropertiesBuilder builder)
-                : base(new JellyfishContext(), "testCircuitBreakerReportsOpenIfForcedOpen", null, null, ExecutionIsolationStrategy.Thread, builder)
+                : base(new JellyfishContext(), "testCircuitBreakerReportsOpenIfForcedOpen", builder, null, null)
             {
             }
 

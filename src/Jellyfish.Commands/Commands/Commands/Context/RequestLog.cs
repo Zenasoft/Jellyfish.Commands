@@ -8,30 +8,28 @@ namespace Jellyfish.Commands
 {
     public class RequestLog
     {
-        //        private static Logger logger = LoggerFactory.getLogger(HystrixRequestLog.class);
-
         /**
          * Upper limit on RequestLog before ignoring further additions and logging warnings.
          * 
          * Intended to help prevent memory leaks when someone isn't aware of the
-         * HystrixRequestContext lifecycle or enabling/disabling RequestLog.
+         * RequestContext lifecycle or enabling/disabling RequestLog.
          */
         internal static int MAX_STORAGE = 1000;
 
         /**
-         * History of {@link HystrixInvokableInfo} executed in this request.
+         * History of ServiceCommandInfo executed in this request.
          */
         private Lazy<ConcurrentQueue<ServiceCommandInfo>> allExecutedCommands = new Lazy<ConcurrentQueue<ServiceCommandInfo>>(() => new ConcurrentQueue<ServiceCommandInfo>());
 
         // prevent public instantiation
-        public RequestLog()
+        internal RequestLog()
         {
         }
 
         /**
-         * Retrieve {@link HystrixCommand} instances that were executed during this {@link HystrixRequestContext}.
+         * Retrieve {@link ServiceCommand} instances that were executed during this {@link JellyfishContext}.
          * 
-         * @return {@code Collection<HystrixCommand<?>>}
+         * @return {@code Collection<ServiceCommand<?>>}
          */
         public IEnumerable<ServiceCommandInfo> GetAllExecutedCommands()
         {
@@ -39,16 +37,15 @@ namespace Jellyfish.Commands
         }
 
         /**
-         * Add {@link HystrixCommand} instance to the request log.
+         * Add {@link ServiceCommand} instance to the request log.
          * 
          * @param command
-         *            {@code HystrixCommand<?>}
+         *            {@code ServiceCommand<?>}
          */
         public void AddExecutedCommand(ServiceCommandInfo command)
         {
             if (allExecutedCommands.Value.Count >= MAX_STORAGE)
             {
-                //            logger.warn("RequestLog ignoring command after reaching limit of " + MAX_STORAGE + ". See https://github.com/Netflix/Hystrix/issues/53 for more information.");
                 return;
             }
             allExecutedCommands.Value.Enqueue(command);
@@ -78,7 +75,6 @@ namespace Jellyfish.Commands
          * For example, <code>TestCommand[SUCCESS][15ms]x4</code> represents TestCommand being executed 4 times and the sum of those 4 executions was 15ms. These 4 each executed the run() method since
          * <code>RESPONSE_FROM_CACHE</code> was not present as an event.
          *
-         * If an EMIT or FALLBACK_EMIT has a multiplier such as <code>x5</code>, that means a <code>HystrixObservableCommand</code> was used and it emitted that number of <code>OnNext</code>s.
          * <p>
          * For example, <code>TestCommand[EMITx5, FAILURE, FALLBACK_EMITx6, FALLBACK_FAILURE][100ms]</code> represents TestCommand executing observably, emitted 5 <code>OnNext</code>s, then an <code>OnError</code>.
          * This command also has an Observable fallback, and it emits 6 <code>OnNext</code>s, then an <code>OnCompleted</code>.
@@ -201,7 +197,7 @@ namespace Jellyfish.Commands
             }
             catch (Exception )
             {
-                //logger.error("Failed to create HystrixRequestLog response header string.", e);
+                //logger.error("Failed to create RequestLog response header string.", e);
                 // don't let this cause the entire app to fail so just return "Unknown"
                 return "Unknown";
             }

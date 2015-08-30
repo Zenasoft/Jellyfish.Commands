@@ -11,7 +11,8 @@ namespace Sample.HttpCommand.Commands
     {
         private string _id;
 
-        public MyCommand(IJellyfishContext ctx, string id) : base(ctx, "MyCommand")
+        public MyCommand(IJellyfishContext ctx, string id) 
+            : base(ctx, "MyCommand")
         {
             _id = id;
         }

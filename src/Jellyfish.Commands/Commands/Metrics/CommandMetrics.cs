@@ -11,25 +11,14 @@ using System.Linq;
 
 namespace Jellyfish.Commands.Metrics
 {
-    public struct CommandMetricsEntry
+    public static class CommandMetricsFactory
     {
-        public string CommandName { get; private set; }
-        public CommandMetrics Metrics { get; set; }
+        private static ConcurrentDictionary<string, CommandMetrics> _metrics = new ConcurrentDictionary<string, CommandMetrics>();
 
-        public CommandMetricsEntry(string commandName,  CommandMetrics metrics)
+        internal static void Reset()
         {
-            CommandName = commandName;
-            Metrics = metrics;
+            Interlocked.Exchange(ref _metrics, new ConcurrentDictionary<string, CommandMetrics>());
         }
-    }
-
-    public class CommandMetrics
-    {
-        public static ConcurrentDictionary<string, CommandMetrics> _metrics = new ConcurrentDictionary<string, CommandMetrics>();
-        private CommandProperties _properties;
-        private IClock _clock;
-        private long _lastReset;
-        public string CommandGroup { get; private set; }
 
         public static CommandMetrics GetInstance(string name, string commandGroup, CommandProperties properties, IClock clock)
         {
@@ -39,11 +28,19 @@ namespace Jellyfish.Commands.Metrics
             return _metrics.GetOrAdd(name, n => new CommandMetrics(n, commandGroup, properties, clock));
         }
 
-        public static IEnumerable<CommandMetricsEntry> GetInstances()
+        public static IEnumerable<CommandMetrics> GetInstances()
         {
             return from e in _metrics
-                   select new CommandMetricsEntry(e.Key, e.Value);
+                   select e.Value;
         }
+    }
+
+    public class CommandMetrics
+    {
+        private CommandProperties _properties;
+        private IClock _clock;
+        private long _lastReset;
+        public string CommandGroup { get; private set; }
 
         private readonly RollingNumber _counter;
         private readonly RollingPercentileNumber _percentileExecution;

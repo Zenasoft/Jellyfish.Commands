@@ -56,20 +56,20 @@ namespace Jellyfish.Commands
         }
 
         /// <summary>
-        /// Invoked at start of thread execution when <see cref="HystrixCommand"/> is executed using {@link ExecutionIsolationStrategy#THREAD}.
+        /// Invoked at start of thread execution when <see cref="ServiceCommand"/> is executed using {@link ExecutionIsolationStrategy#THREAD}.
         /// </summary>
-        /// <param name="commandInstance">The executing HystrixCommand instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand instance.</param>
         public virtual void OnThreadStart<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default
         }
 
         /// <summary>
-        /// Invoked at completion of thread execution when <see cref="HystrixCommand"/> is executed using {@link ExecutionIsolationStrategy#THREAD}.
-        /// This will get invoked if the Hystrix thread successfully executes, regardless of whether the calling thread
+        /// Invoked at completion of thread execution when <see cref="ServiceCommand"/> is executed using {@link ExecutionIsolationStrategy#THREAD}.
+        /// This will get invoked if the thread successfully executes, regardless of whether the calling thread
         /// encountered a timeout.
         /// </summary>
-        /// <param name="commandInstance">The executing HystrixCommand instance.</param>
+        /// <param name="commandInstance">The executing ServiceCommand instance.</param>
         public virtual void OnThreadComplete<T>(ServiceCommand<T> commandInstance)
         {
             // do nothing by default
@@ -153,9 +153,9 @@ namespace Jellyfish.Commands
         }
 
         /// <summary>
-        /// Invoked when the command response is found in the <see cref="com.netflix.hystrix.HystrixRequestCache"/>.
+        /// Invoked when the command response is found in the cache.
         /// </summary>
-        /// <param name="commandInstance">The executing HystrixCommand</param>
+        /// <param name="commandInstance">The executing ServiceCommand</param>
         public virtual void OnCacheHit<T>(ServiceCommand<T> commandInstance)
         {
             //do nothing by default

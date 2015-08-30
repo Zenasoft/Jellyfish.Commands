@@ -10,6 +10,7 @@ using Jellyfish.Commands.CircuitBreaker;
 using Jellyfish.Commands.Metrics;
 using Jellyfish.Commands.Utils;
 using System.Diagnostics.Contracts;
+using Microsoft.Framework.Logging;
 
 namespace Jellyfish.Commands
 {
@@ -19,8 +20,19 @@ namespace Jellyfish.Commands
         Semaphore,
     }
 
+    /**
+ * Used to wrap code that will execute potentially risky functionality (typically meaning a service call over the network)
+ * with fault and latency tolerance, statistics and performance metrics capture, circuit breaker and bulkhead functionality.
+ * This command is essentially a blocking command but provides an Observable facade if used with observe()
+ * 
+ * @param <R>
+ *            the return type
+ * 
+ * @ThreadSafe
+ */
     public abstract class ServiceCommand<T> : ServiceCommandInfo
     {
+        /// Cache item to save value and execution result of a command
         class CacheItem
         {
             public ExecutionResult ExecutionResult;
@@ -28,9 +40,9 @@ namespace Jellyfish.Commands
         }
 
         [Flags]
-        protected enum ServiceCommandOptions
+        internal enum ServiceCommandOptions
         {
-            None=0,
+            None = 0,
             ThreadExecutionStrategy = 1,
             SemaphoreExecutionStrategy = 2,
             HasFallBack = 4,
@@ -56,6 +68,8 @@ namespace Jellyfish.Commands
         private bool _isExecutedInThread;
         private bool _isExecutionComplete;
 
+        protected ILogger Logger { get; set; }
+
         public ICircuitBreaker CircuitBreaker { get { return _circuitBreaker; } }
 
         public CommandMetrics Metrics { get; private set; }
@@ -71,40 +85,17 @@ namespace Jellyfish.Commands
         /// </summary>
         public ITryableSemaphore ExecutionSemaphore
         {
-            get
-            {
-                if (executionSemaphoreOverride == null)
-                {
-                    return _executionSemaphorePerCircuit.GetOrAdd(CommandName, new TryableSemaphoreActual(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests));
-                }
-                else
-                {
-                    return executionSemaphoreOverride;
-                }
-            }
-            internal set
-            {
-                executionSemaphoreOverride = value;
-            }
+            get { return executionSemaphoreOverride ?? _executionSemaphorePerCircuit.GetOrAdd(CommandName, new TryableSemaphoreActual(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests));}
+            internal set { executionSemaphoreOverride = value; }
         }
-
 
         /// <summary>
         /// Get the TryableSemaphore this Command should use if a fallback occurs.
         /// </summary>
         public ITryableSemaphore FallBackSemaphore
         {
-            get
-            {
-                if (fallbackSemaphoreOverride == null)
-                {
-                    return _fallbackSemaphorePerCircuit.GetOrAdd(CommandName, new TryableSemaphoreActual(Properties.FallbackIsolationSemaphoreMaxConcurrentRequests));
-                }
-                else
-                {
-                    return fallbackSemaphoreOverride;
-                }
-            }
+            get { return fallbackSemaphoreOverride ?? _fallbackSemaphorePerCircuit.GetOrAdd(CommandName, new TryableSemaphoreActual(Properties.FallbackIsolationSemaphoreMaxConcurrentRequests)); }
+            internal set {fallbackSemaphoreOverride = value;}
         }
 
         public TaskScheduler TaskScheduler
@@ -115,23 +106,47 @@ namespace Jellyfish.Commands
                     _taskscheduler = TaskSchedulerFactory.CreateOrRetrieve(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Get(), _threadPoolKey);
                 return _taskscheduler;
             }
-            set
-            {
-                _taskscheduler = value;
-            }
+            set { _taskscheduler = value; }
         }
 
-
-        protected ServiceCommand(IJellyfishContext context, string commandGroup, string threadPoolKey = null, string commandName = null, ExecutionIsolationStrategy executionPolicy = ExecutionIsolationStrategy.Thread, CommandPropertiesBuilder properties = null, CommandExecutionHook executionHook = null)
-            : this( context, null, commandGroup, commandName, threadPoolKey, executionPolicy, properties)
+        /// <summary>
+        /// Construct a <see cref="ServiceCommand{T}"/>.
+        /// <p>
+        /// The CommandName will be derived from the implementing class name.
+        /// Construct a <see cref="ServiceCommand{T}"/> with defined <see cref="CommandPropertiesBuilder"/> that allows injecting property
+        ///  and strategy overrides and other optional arguments.
+        /// <p>
+        /// NOTE: The CommandName is used to associate a <see cref="ServiceCommand{T}"/>
+        ///  with <see cref="ICircuitBreaker"/>, <see cref="CommandMetrics"/> and other objects.
+        /// <p>
+        /// Do not create multiple <see cref="ServiceCommand{T}"/> implementations with the same CommandName
+        /// but different injected default properties as the first instantiated will win.
+        /// <p>
+        /// Properties passed in via <see cref="CommandPropertiesBuilder">Properties</see> are cached for the given CommandName for the life of the Process
+        /// or until <see cref="IJellyfishContext.Reset"/> is called. Dynamic properties allow runtime changes. Read more on the <a href="https://github.com/Zenasoft/Jellyfish.Configuration"> Wiki</a>.  
+        /// </summary>
+        /// <param name="context">Current jellyfish context</param>
+        /// <param name="commandGroup">
+        /// used to group together multiple <see cref="ServiceCommand{T}"/> objects. <p/>
+        /// The CommandGroup is used to represent a common relationship between commands. 
+        /// For example, a library or team name, the system all related commands interact with, common business purpose etc.
+        /// </param>
+        /// <param name="properties"></param>
+        /// <param name="threadPoolKey">
+        /// used to identify the thread pool in which a <see cref="ServiceCommand{T}"/> executes.
+        /// </param>
+        protected ServiceCommand(IJellyfishContext context, string commandGroup, CommandPropertiesBuilder properties = null, string threadPoolKey = null, string commandName = null, CommandExecutionHook executionHook = null)
+            : this(context, null, commandGroup, commandName, threadPoolKey, properties)
         {
         }
 
-        internal ServiceCommand(IJellyfishContext context, IClock clock, string commandGroup, string commandName, string threadPoolKey = null, ExecutionIsolationStrategy executionPolicy = ExecutionIsolationStrategy.Thread, CommandPropertiesBuilder properties = null, ICircuitBreaker circuitBreaker = null, CommandMetrics metrics = null, CommandExecutionHook executionHook=null)
+        internal ServiceCommand(IJellyfishContext context, IClock clock, string commandGroup, string commandName, string threadPoolKey = null, CommandPropertiesBuilder properties = null, ICircuitBreaker circuitBreaker = null, CommandMetrics metrics = null, CommandExecutionHook executionHook = null)
         {
             Contract.Requires(context != null);
             if (String.IsNullOrEmpty(commandGroup))
                 throw new ArgumentException("commandGroup can not be null or empty.");
+
+            Logger = context.GetService<ILoggerFactory>()?.CreateLogger(this.GetType().FullName) ?? EmptyLogger.Instance;
 
             _clock = clock ?? Clock.GetInstance(); // for test
             CommandGroup = commandGroup;
@@ -140,6 +155,8 @@ namespace Jellyfish.Commands
             _executionResult = new ExecutionResult();
 
             _executionHook = executionHook ?? context.CommandExecutionHook;
+
+            Properties = properties?.Build(CommandName) ?? new CommandProperties(CommandName);
 
             this._flags = _states.GetOrAdd(CommandName, (n) =>
             {
@@ -151,14 +168,13 @@ namespace Jellyfish.Commands
                 return flags;
             });
 
+            var executionPolicy = Properties.ExecutionIsolationStrategy.Get();
             if (executionPolicy == ExecutionIsolationStrategy.Semaphore)
                 _flags |= ServiceCommandOptions.SemaphoreExecutionStrategy;
             if (executionPolicy == ExecutionIsolationStrategy.Thread)
                 _flags |= ServiceCommandOptions.ThreadExecutionStrategy;
 
-            Properties = properties != null ? properties.Build(CommandName) : new CommandProperties(CommandName);
-
-            Metrics = metrics ?? CommandMetrics.GetInstance(CommandName, CommandGroup, Properties, _clock);
+            Metrics = metrics ?? CommandMetricsFactory.GetInstance(CommandName, CommandGroup, Properties, _clock);
 
             _circuitBreaker = circuitBreaker ?? (Properties.CircuitBreakerEnabled.Get() ? CircuitBreakerFactory.GetOrCreateInstance(CommandName, Properties, Metrics, _clock) : new NoOpCircuitBreaker());
 
@@ -397,9 +413,9 @@ namespace Jellyfish.Commands
         #endregion
 
 
-        protected void SetFlag(ServiceCommandOptions option, bool set)
+        internal void SetFlag(ServiceCommandOptions option, bool set)
         {
-            if(set)
+            if (set)
                 _flags |= option;
             else
                 _flags &= ~option;
@@ -422,7 +438,7 @@ namespace Jellyfish.Commands
 
             CacheItem cacheItem;
             // get from cache
-            if ( _requestCache != null)
+            if (_requestCache != null)
             {
                 var key = GetCacheKey();
                 if (key != null && _requestCache.TryGetValue(key, out cacheItem))
@@ -435,9 +451,9 @@ namespace Jellyfish.Commands
                     {
                         _executionHook.OnCacheHit(this);
                     }
-                    catch (Exception )
+                    catch (Exception hookEx)
                     {
-                        //logger.warn("Error calling HystrixCommandExecutionHook.onCacheHit", hookEx);
+                        Logger.LogWarning("Error calling CommandExecutionHook.onCacheHit", hookEx);
                     }
                     return cacheItem.Value;
                 }
@@ -462,8 +478,8 @@ namespace Jellyfish.Commands
                         try
                         {
                             // if bulkhead by thread                            
-                            var token = Properties.ExecutionTimeoutEnabled.Get() 
-                                ? new CancellationTokenSource(Properties.ExecutionTimeoutInMilliseconds.Get()) 
+                            var token = Properties.ExecutionTimeoutEnabled.Get()
+                                ? new CancellationTokenSource(Properties.ExecutionTimeoutInMilliseconds.Get())
                                 : new CancellationTokenSource();
                             try
                             {
@@ -471,9 +487,9 @@ namespace Jellyfish.Commands
                                 {
                                     _isExecutedInThread = true;
 
-                                    /**
-  * If any of these hooks throw an exception, then it appears as if the actual execution threw an error
-  */
+                                    ///
+                                    /// If any of these hooks throw an exception, then it appears as if the actual execution threw an error
+                                    ///
                                     _executionHook.OnThreadStart(this);
                                     _executionHook.OnExecutionStart(this);
 
@@ -503,9 +519,9 @@ namespace Jellyfish.Commands
                                 {
                                     _executionHook.OnExecutionSuccess(this);
                                 }
-                                catch (Exception )
+                                catch (Exception hookEx)
                                 {
-                                   // logger.warn("Error calling HystrixCommandExecutionHook.onExecutionSuccess", hookEx);
+                                    Logger.LogWarning("Error calling CommandExecutionHook.onExecutionSuccess", hookEx);
                                 }
                             }
                             catch (AggregateException ae)
@@ -528,7 +544,7 @@ namespace Jellyfish.Commands
                                 return await GetFallbackOrThrowException(EventType.TIMEOUT, FailureType.TIMEOUT, "timed-out", ServiceCommand<T>.TimeoutException);
                             }
                             catch (Exception e)
-                            { 
+                            {
                                 ms = _clock.EllapsedTimeInMs - start;
                                 e = _executionHook.OnExecutionError(this, e);
 
@@ -545,16 +561,16 @@ namespace Jellyfish.Commands
                             {
                                 _executionHook.OnSuccess(this);
                             }
-                            catch (Exception)
+                            catch (Exception hookEx)
                             {
-                               // logger.warn("Error calling HystrixCommandExecutionHook.onSuccess", hookEx);
+                                Logger.LogWarning("Error calling CommandExecutionHook.onSuccess", hookEx);
                             }
 
                             if (_requestCache != null)
                             {
                                 var key = GetCacheKey();
 
-                                cacheItem = new CacheItem { ExecutionResult = new ExecutionResult( _executionResult), Value = result };
+                                cacheItem = new CacheItem { ExecutionResult = new ExecutionResult(_executionResult), Value = result };
                                 cacheItem.ExecutionResult.AddEvent(EventType.RESPONSE_FROM_CACHE);
                                 cacheItem.ExecutionResult.ExecutionTime = -1;
 
@@ -591,7 +607,7 @@ namespace Jellyfish.Commands
             }
             finally
             {
-                if( start > 0)
+                if (start > 0)
                     RecordTotalExecutionTime(start);
                 Metrics.DecrementConcurrentExecutionCount();
                 _isExecutionComplete = true;
@@ -609,17 +625,18 @@ namespace Jellyfish.Commands
                 try
                 {
                     var decorated = _executionHook.OnError(this, FailureType.BAD_REQUEST_EXCEPTION, e);
-                    if (decorated is BadRequestException) { 
+                    if (decorated is BadRequestException)
+                    {
                         e = decorated;
                     }
                     else
                     {
-                     //   logger.warn("ExecutionHook.onError returned an exception that was not an instance of HystrixBadRequestException so will be ignored.", decorated);
+                        Logger.LogWarning("ExecutionHook.onError returned an exception that was not an instance of BadRequestException so will be ignored.", decorated);
                     }
                 }
-                catch(Exception )
+                catch (Exception hookEx)
                 {
-                    //logger.warn("Error calling HystrixCommandExecutionHook.onError", hookEx);
+                    Logger.LogWarning("Error calling CommandExecutionHook.onError", hookEx);
                 }
                 throw e;
             }
@@ -627,7 +644,7 @@ namespace Jellyfish.Commands
             /**
              * All other error handling
              */
-            // logger.debug("Error executing Command.run(). Proceeding to fallback logic ...", e);
+            Logger.LogDebug("Error executing Command.run(). Proceeding to fallback logic ...", e);
 
             // report failure
             Metrics.MarkFailure(ms);
@@ -653,10 +670,11 @@ namespace Jellyfish.Commands
 
         private async Task<T> GetFallbackOrThrowException(EventType eventType, FailureType failureType, string message, Exception ex)
         {
-            try {
+            try
+            {
                 if (IsUnrecoverable(ex))
                 {
-                    //  logger.error("Unrecoverable Error for Command so will throw RuntimeException and not apply fallback. ", ex);
+                    Logger.LogError("Unrecoverable Error for Command so will throw RuntimeException and not apply fallback. ", ex);
                     // record the _executionResult
                     _executionResult.AddEvent(eventType);
 
@@ -683,9 +701,9 @@ namespace Jellyfish.Commands
                         {
                             _executionHook.OnFallbackSuccess(this);
                         }
-                        catch (Exception )
+                        catch (Exception hookEx)
                         {
-                            //logger.warn("Error calling HystrixCommandExecutionHook.onFallbackSuccess", hookEx);
+                            Logger.LogWarning("Error calling CommandExecutionHook.onFallbackSuccess", hookEx);
                         }
                         Metrics.MarkFallbackSuccess();
                         _executionResult.AddEvent(EventType.FALLBACK_SUCCESS);
@@ -697,15 +715,15 @@ namespace Jellyfish.Commands
                         {
                             ex2 = _executionHook.OnFallbackError(this, ex2);
                         }
-                        catch (Exception)
+                        catch (Exception hookEx)
                         {
-                            //logger.warn("Error calling HystrixCommandExecutionHook.onFallbackError", hookEx);
+                            Logger.LogWarning("Error calling CommandExecutionHook.onFallbackError", hookEx);
                         }
 
                         var fe = ex2 is AggregateException ? ((AggregateException)ex2).InnerException : ex2;
                         if (fe is NotImplementedException)
                         {
-                            // logger.debug("No fallback for Command. ", fe); // debug only since we're throwing the exception and someone higher will do something with it
+                            Logger.LogDebug("No fallback for Command. ", fe); // debug only since we're throwing the exception and someone higher will do something with it
                             throw new CommandRuntimeException(failureType, CommandName, GetLogMessagePrefix() + " and no fallback available.", ex, fe);
                         }
                         else
@@ -724,7 +742,7 @@ namespace Jellyfish.Commands
                 {
                     Metrics.MarkFallbackRejection();
                     _executionResult.AddEvent(EventType.FALLBACK_REJECTION);
-                    //logger.debug("Command Fallback Rejection."); // debug only since we're throwing the exception and someone higher will do something with it
+                    Logger.LogDebug("Command Fallback Rejection."); // debug only since we're throwing the exception and someone higher will do something with it
                     // if we couldn't acquire a permit, we "fail fast" by throwing an exception
                     throw new CommandRuntimeException(FailureType.REJECTED_SEMAPHORE_FALLBACK, CommandName, GetLogMessagePrefix() + "fallback execution rejected.", null, null);
                 }
@@ -737,7 +755,7 @@ namespace Jellyfish.Commands
             }
         }
 
-        private string GetLogMessagePrefix()
+        protected virtual string GetLogMessagePrefix()
         {
             return CommandName;
         }
@@ -759,11 +777,11 @@ namespace Jellyfish.Commands
             throw new NotImplementedException();
         }
 
-        /**
- * Record that this command was executed in the HystrixRequestLog.
- * <p>
- * This can be treated as an async operation as it just adds a references to "this" in the log even if the current command is still executing.
- */
+        ///
+        /// Record that this command was executed in the RequestLog.
+        /// <p>
+        /// This can be treated as an async operation as it just adds a references to "this" in the log even if the current command is still executing.
+        ///
         protected void RecordExecutedCommand()
         {
             if (Properties.RequestLogEnabled.Get())
@@ -776,9 +794,9 @@ namespace Jellyfish.Commands
             }
         }
 
-        /**
-  * Record the duration of execution as response or exception is being returned to the caller.
-  */
+        ///
+        /// Record the duration of execution as response or exception is being returned to the caller.
+        ///
         protected void RecordTotalExecutionTime(long startTime)
         {
             long duration = _clock.EllapsedTimeInMs - startTime;
