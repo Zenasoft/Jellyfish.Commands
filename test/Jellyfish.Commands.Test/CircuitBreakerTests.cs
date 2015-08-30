@@ -475,7 +475,7 @@ namespace Jellyfish.Commands.Tests
 
         internal static CommandMetrics getMetrics(CommandPropertiesBuilder properties, IClock clock)
         {
-            return new CommandMetrics("KEY_ONE", properties.Build("KEY_ONE"), clock);
+            return new CommandMetrics("KEY_ONE", "GROUP_ONE", properties.Build("KEY_ONE"), clock);
         }
 
         private static ICircuitBreaker getCircuitBreaker(string key, string commandGroup, CommandMetrics metrics, CommandPropertiesBuilder properties, IClock clock)

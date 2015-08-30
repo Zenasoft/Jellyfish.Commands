@@ -54,21 +54,22 @@ namespace Sample.HttpCommand.Controllers
                         }
                     }
 
-                    writer.Flush();
+                    await writer.FlushAsync();
                     await Response.Body.FlushAsync(token.Token);
 
-                    await Task.Delay(delay.Value);
+                    await Task.Delay(delay.Value, token.Token);
                 }
 
                 if(token!=null)
                     token.Cancel();
-
-                return "end";
             }
+            catch { }           
             finally
             {
                 Interlocked.Decrement(ref _nbConnections);
             }
+
+            return "end";
         }         
     }
 

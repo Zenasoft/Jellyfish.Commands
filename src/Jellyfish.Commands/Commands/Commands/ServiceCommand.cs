@@ -158,7 +158,7 @@ namespace Jellyfish.Commands
 
             Properties = properties != null ? properties.Build(CommandName) : new CommandProperties(CommandName);
 
-            Metrics = metrics ?? CommandMetrics.GetInstance(CommandName, Properties, _clock);
+            Metrics = metrics ?? CommandMetrics.GetInstance(CommandName, CommandGroup, Properties, _clock);
 
             _circuitBreaker = circuitBreaker ?? (Properties.CircuitBreakerEnabled.Get() ? CircuitBreakerFactory.GetOrCreateInstance(CommandName, Properties, Metrics, _clock) : new NoOpCircuitBreaker());
 
