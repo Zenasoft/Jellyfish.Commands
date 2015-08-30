@@ -32,6 +32,8 @@ namespace Sample.HttpCommand
         // Configure is called after ConfigureServices is called.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseJellyfish();
+            
             // Configure the HTTP request pipeline.
             app.UseStaticFiles();
 
