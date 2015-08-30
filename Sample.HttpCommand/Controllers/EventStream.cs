@@ -36,20 +36,21 @@ namespace Sample.HttpCommand.Controllers
                 Response.ContentType = "text /event-stream; charset=UTF-8";
                 Response.Headers.Add("Cache-Control", new string[] { "no-cache, no-store, max-age=0, must-revalidate" });
                 Response.Headers.Add("Pragma", new string[] { "no-cache" });
-
+                Response.StatusCode = 200;
+                
                 while (!Context.RequestAborted.IsCancellationRequested) {
                     var events = poller.GetJsonMetrics();
                     var writer = new System.IO.StreamWriter(Response.Body);
 
                     if (events.Count() == 0)
                     {
-                        await writer.WriteLineAsync("ping: ");
+                         writer.WriteLine("ping: \n");
                     }
                     else
                     {
                         foreach (var json in events)
                         {
-                            await writer.WriteLineAsync("data: " + json);
+                            writer.WriteLine("data: " + json + "\n");
                         }
                     }
 

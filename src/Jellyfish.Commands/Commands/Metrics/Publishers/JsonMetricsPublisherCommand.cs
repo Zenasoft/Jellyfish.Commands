@@ -96,15 +96,6 @@ namespace Jellyfish.Commands.Metrics.Publishers
                     handler(jsonString);
                 }
 
-                //for (HystrixThreadPoolMetrics threadPoolMetrics : HystrixThreadPoolMetrics.getInstances())
-                //{
-                //    if (hasExecutedCommandsOnThread(threadPoolMetrics))
-                //    {
-                //        String jsonString = getThreadPoolJson(threadPoolMetrics);
-                //        listener.handleJsonMetric(jsonString);
-                //    }
-                //}
-
                 //for (HystrixCollapserMetrics collapserMetrics : HystrixCollapserMetrics.getInstances())
                 //{
                 //    String jsonString = getCollapserJson(collapserMetrics);
@@ -131,7 +122,7 @@ namespace Jellyfish.Commands.Metrics.Publishers
             json.writeStartObject();
             json.writeStringField("type", "HystrixCommand");
             json.writeStringField("name", commandMetrics.CommandName);
-            //    json.writeStringField("group", commandMetrics.CommandName);
+            json.writeStringField("group", commandMetrics.CommandGroup);
             json.writeNumberField("currentTime", DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond); // TODO check this
 
             // circuit breaker

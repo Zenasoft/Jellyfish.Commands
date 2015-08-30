@@ -13,12 +13,14 @@ namespace Jellyfish.Commands.Metrics
 {
     public struct CommandMetricsEntry
     {
+        public string CommandGroup { get; private set; }
         public string CommandName { get; private set; }
         public CommandMetrics Metrics { get; set; }
 
-        public CommandMetricsEntry(string name, CommandMetrics metrics)
+        public CommandMetricsEntry(string commandName, string commandGroup, CommandMetrics metrics)
         {
-            CommandName = name;
+            CommandName = commandName;
+            CommandGroup = commandGroup;
             Metrics = metrics;
         }
     }
@@ -30,12 +32,12 @@ namespace Jellyfish.Commands.Metrics
         private IClock _clock;
         private long _lastReset;
 
-        public static CommandMetrics GetInstance(string name,  CommandProperties properties, IClock clock)
+        public static CommandMetrics GetInstance(string name, string commandGroup, CommandProperties properties, IClock clock)
         {
             Contract.Assert(!String.IsNullOrEmpty(name));
             Contract.Assert(properties != null);
 
-            return _metrics.GetOrAdd(name, n => new CommandMetrics(n, properties, clock));
+            return _metrics.GetOrAdd(name, n => new CommandMetrics(n, commandGroup, properties, clock));
         }
 
         public static IEnumerable<CommandMetricsEntry> GetInstances()
