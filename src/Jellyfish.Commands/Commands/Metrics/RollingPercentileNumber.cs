@@ -61,7 +61,7 @@ namespace Jellyfish.Commands.Metrics
         /// </summary>
         public int GetPercentile(double percentile)
         {
-            if (!this.enabled.Get())
+            if (!this.enabled.Value)
                 return -1;
 
             // fetch the current snapshot
@@ -76,7 +76,7 @@ namespace Jellyfish.Commands.Metrics
         {
             get
             {
-                if (!this.enabled.Get())
+                if (!this.enabled.Value)
                     return -1;
 
                 // fetch the current snapshot
@@ -102,7 +102,7 @@ namespace Jellyfish.Commands.Metrics
 
         public void AddValue(int value)
         {
-            if (!this.enabled.Get())
+            if (!this.enabled.Value)
                 return;
 
             GetCurrentBucket().AddValue(value);

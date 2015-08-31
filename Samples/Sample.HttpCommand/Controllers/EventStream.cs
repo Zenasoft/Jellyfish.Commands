@@ -32,7 +32,7 @@ namespace Sample.HttpCommand.Controllers
     public class EventStreamHandler
     {
         private int _nbConnections;
-        private IDynamicProperty<int> maxConcurrentConnection = DynamicProperties.Instance.GetOrDefaultProperty("jellyfish.stream.maxConcurrentConnections", 5);
+        private IDynamicProperty<int> maxConcurrentConnection = DynamicProperties.Instance.CreateOrUpdateProperty("jellyfish.stream.maxConcurrentConnections", 5);
         private RequestDelegate _next;
         
         public EventStreamHandler(RequestDelegate next) {
@@ -54,7 +54,7 @@ namespace Sample.HttpCommand.Controllers
             var nb = Interlocked.Increment(ref _nbConnections);
             CancellationTokenSource token = null;
             try {
-                if( nb > maxConcurrentConnection.Get() )
+                if( nb > maxConcurrentConnection.Value )
                 {
                     context.Response.StatusCode = 503;
                     context.Response.ContentType = "text/plain";

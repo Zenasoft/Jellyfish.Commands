@@ -119,8 +119,8 @@ using System.Threading;
 
         //            try
         //            {
-        //                Assert.Equal("A", f1.Get());
-        //                Assert.Equal("B", f2.Get());
+        //                Assert.Equal("A", f1.Value);
+        //                Assert.Equal("B", f2.Value);
         //            }
         //            catch (Exception e)
         //            {
@@ -179,9 +179,9 @@ using System.Threading;
 
         //            try
         //            {
-        //                Assert.Equal("A", f1.Get());
-        //                Assert.Equal("B", f2.Get());
-        //                Assert.Equal("A", f3.Get());
+        //                Assert.Equal("A", f1.Value);
+        //                Assert.Equal("B", f2.Value);
+        //                Assert.Equal("A", f3.Value);
         //            }
         //            catch (Exception e)
         //            {
@@ -246,11 +246,11 @@ using System.Threading;
 
         //            try
         //            {
-        //                Assert.Equal("A", f2.Get());
-        //                Assert.Equal("A", f3.Get());
-        //                Assert.Equal("A", f4.Get());
+        //                Assert.Equal("A", f2.Value);
+        //                Assert.Equal("A", f3.Value);
+        //                Assert.Equal("A", f4.Value);
 
-        //                Assert.Equal("A", f1.Get());
+        //                Assert.Equal("A", f1.Value);
         //            }
         //            catch (Exception e)
         //            {
@@ -321,9 +321,9 @@ using System.Threading;
 
         //            try
         //            {
-        //                Assert.Equal("A", f1.Get());
-        //                Assert.Equal("B", f2.Get());
-        //                Assert.Equal("A", f3.Get());
+        //                Assert.Equal("A", f1.Value);
+        //                Assert.Equal("B", f2.Value);
+        //                Assert.Equal("A", f3.Value);
         //            }
         //            catch (Exception e)
         //            {
@@ -386,9 +386,9 @@ using System.Threading;
 
         //            try
         //            {
-        //                Assert.Equal("A", f1.Get());
-        //                Assert.Equal("B", f2.Get());
-        //                Assert.Equal("A", f3.Get());
+        //                Assert.Equal("A", f1.Value);
+        //                Assert.Equal("B", f2.Value);
+        //                Assert.Equal("A", f3.Value);
         //            }
         //            catch (Exception e)
         //            {
@@ -455,9 +455,9 @@ using System.Threading;
 
         //            try
         //            {
-        //                Assert.Equal("A", f1.Get());
-        //                Assert.Equal("B", f2.Get());
-        //                Assert.Equal("A", f3.Get());
+        //                Assert.Equal("A", f1.Value);
+        //                Assert.Equal("B", f2.Value);
+        //                Assert.Equal("A", f3.Value);
         //            }
         //            catch (Exception e)
         //            {
@@ -651,7 +651,7 @@ using System.Threading;
         //            Future<bool> f3 = r3.queue();
         //            try
         //            {
-        //                f3.Get();
+        //                f3.Value;
         //                // we should have thrown an exception
         //               new Exception("expected a timeout");
         //            }
@@ -712,7 +712,7 @@ using System.Threading;
         //            Future<bool> f = c.queue(); // return from cache #4
         //                                        // the bug is that we're getting a null Future back, rather than a Future that returns false
         //            Assert.NotNull(f);
-        //            Assert.False(f.Get());
+        //            Assert.False(f.Value);
 
         //            Assert.True(c.isResponseFromFallback());
         //            Assert.True(c.isResponseTimedOut());
@@ -790,7 +790,7 @@ using System.Threading;
         //            Future<bool> f3 = r3.queue();
         //            try
         //            {
-        //                f3.Get();
+        //                f3.Value;
         //                // we should have thrown an exception
         //               new Exception("expected a timeout");
         //            }
@@ -871,7 +871,7 @@ using System.Threading;
         //            RequestCacheThreadRejectionWithoutFallback r3 = new RequestCacheThreadRejectionWithoutFallback(circuitBreaker, completionLatch);
         //            try
         //            {
-        //                Console.WriteLine("f3: " + r3.queue().Get());
+        //                Console.WriteLine("f3: " + r3.queue().Value);
         //                // we should have thrown an exception
         //               new Exception("expected a rejection");
         //            }
@@ -935,7 +935,7 @@ using System.Threading;
         //                Assert.Equal(true, command.ExecuteAsync().Wait());
 
         //                TestCommand<bool> command2 = new SuccessfulTestCommand();
-        //                Assert.Equal(true, command2.queue().Get());
+        //                Assert.Equal(true, command2.queue().Value);
 
         //                // we should be able to execute without a RequestVariable if ...
         //                // 1) We don't have a cacheKey
@@ -967,7 +967,7 @@ using System.Threading;
         //                Assert.Equal("one", command.ExecuteAsync().Wait());
 
         //                SuccessfulCacheableCommand command2 = new SuccessfulCacheableCommand<String>(circuitBreaker, true, "two");
-        //                Assert.Equal("two", command2.queue().Get());
+        //                Assert.Equal("two", command2.queue().Value);
 
         //               new Exception("We expect an exception because cacheKey requires RequestVariable.");
 
@@ -1018,7 +1018,7 @@ using System.Threading;
         //            TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
         //            try
         //            {
-        //                new BadRequestCommand(circuitBreaker, ExecutionIsolationStrategy.Thread).queue().Get();
+        //                new BadRequestCommand(circuitBreaker, ExecutionIsolationStrategy.Thread).queue().Value;
         //                // new Exception("we expect to receive a " + BadRequestException.class.GetSimpleName());
         //            }
         //            catch (ExecutionException e)
@@ -1067,7 +1067,7 @@ using System.Threading;
 
         //            try
         //            {
-        //                new BadRequestCommand(circuitBreaker, ExecutionIsolationStrategy.Thread).queue().Get();
+        //                new BadRequestCommand(circuitBreaker, ExecutionIsolationStrategy.Thread).queue().Value;
         //                //  new Exception("we expect to receive a " + BadRequestException.class.GetSimpleName());
         //            }
         //            catch (ExecutionException e)
@@ -1136,7 +1136,7 @@ using System.Threading;
         //            TestCircuitBreaker circuitBreaker = new TestCircuitBreaker();
         //            try
         //            {
-        //                new BadRequestCommand(circuitBreaker, ExecutionIsolationStrategy.SEMAPHORE).queue().Get();
+        //                new BadRequestCommand(circuitBreaker, ExecutionIsolationStrategy.SEMAPHORE).queue().Value;
         //                //  new Exception("we expect to receive a " + BadRequestException.class.GetSimpleName());
         //            }
         //            catch (ExecutionException e)
@@ -1237,11 +1237,11 @@ using System.Threading;
         //            }
 
         //            latch.await(1, TimeUnit.SECONDS);
-        //            Assert.NotNull(t.Get());
-        //            t.Get().printStackTrace();
+        //            Assert.NotNull(t.Value);
+        //            t.Value.printStackTrace();
 
-        //            Assert.True(t.Get() is RuntimeException);
-        //            Assert.Equal("simulated checked exception message", t.Get().InnerException.GetMessage());
+        //            Assert.True(t.Value is RuntimeException);
+        //            Assert.Equal("simulated checked exception message", t.Value.InnerException.GetMessage());
         //            Assert.Equal("simulated checked exception message", command.GetFailedExecutionException().GetMessage());
 
         //            Assert.True(command.ExecutionTimeInMilliseconds > -1);
@@ -1413,7 +1413,7 @@ using System.Threading;
         //        //           new Exception("Interrupted!");
         //        //        }
         //        //
-        //        //        Console.WriteLine("NUM EXCEPTIONS : " + exceptionsSeen.Get());
+        //        //        Console.WriteLine("NUM EXCEPTIONS : " + exceptionsSeen.Value);
         //        //        Assert.Equal(0, circuitBreaker.Metrics.GetCumulativeCount(RollingNumberEvent.SUCCESS));
         //        //        Assert.Equal(numCommands - semaphoreSize, circuitBreaker.Metrics.GetCumulativeCount(RollingNumberEvent.EXCEPTION_THROWN));
         //        //        Assert.Equal(numCommands, circuitBreaker.Metrics.GetCumulativeCount(RollingNumberEvent.FAILURE));
@@ -1588,7 +1588,7 @@ using System.Threading;
         //            {
         //                try
         //                {
-        //                    command.queue().Get();
+        //                    command.queue().Value;
         //                }
         //                catch (Exception e)
         //                {
@@ -1599,7 +1599,7 @@ using System.Threading;
         //            {
         //                try
         //                {
-        //                    command.queue().Get();
+        //                    command.queue().Value;
         //                   new Exception("Expected a command failure!");
         //                }
         //                catch (InterruptedException ie)
@@ -1664,7 +1664,7 @@ using System.Threading;
         //            {
         //                try
         //                {
-        //                    f.Get();
+        //                    f.Value;
         //                }
         //                catch (Exception ex)
         //                {
@@ -1675,7 +1675,7 @@ using System.Threading;
         //            {
         //                try
         //                {
-        //                    f.Get();
+        //                    f.Value;
         //                   new Exception("Expected a command failure!");
         //                }
         //                catch (InterruptedException ie)
@@ -1822,8 +1822,8 @@ using System.Threading;
 
         //            ts.awaitTerminalEvent();
 
-        //            Assert.True(isRequestContextInitialized.Get());
-        //            Assert.True(onErrorThread.Get().GetName().startsWith("Timer"));
+        //            Assert.True(isRequestContextInitialized.Value);
+        //            Assert.True(onErrorThread.Value.GetName().startsWith("Timer"));
 
         //            List<Throwable> errors = ts.GetOnErrorEvents();
         //            Assert.Equal(1, errors.size());
@@ -2088,9 +2088,9 @@ using System.Threading;
         //            //    ex.printStackTrace();
         //            //    threadExceptionEncountered.set(true);
         //            //}
-        //            //Assert.True(threadExceptionEncountered.Get());
-        //            //Assert.True(onThreadStartInvoked.Get());
-        //            //Assert.True(onThreadCompleteInvoked.Get());
+        //            //Assert.True(threadExceptionEncountered.Value);
+        //            //Assert.True(onThreadStartInvoked.Value);
+        //            //Assert.True(onThreadCompleteInvoked.Value);
 
         //            //TestCommand<Integer> semaphoreCmd = new FailureInjectedCommand(ExecutionIsolationStrategy.SEMAPHORE);
         //            //try {
@@ -2100,7 +2100,7 @@ using System.Threading;
         //            //    ex.printStackTrace();
         //            //    semaphoreExceptionEncountered.set(true);
         //            //}
-        //            //Assert.True(semaphoreExceptionEncountered.Get());
+        //            //Assert.True(semaphoreExceptionEncountered.Value);
         //        }
 
         /* ******************************************************************************** */
@@ -2418,7 +2418,7 @@ using System.Threading;
 
         //            public boolean isCommandRunningInThread()
         //            {
-        //                return super.GetProperties().executionIsolationStrategy().Get().equals(ExecutionIsolationStrategy.Thread);
+        //                return super.GetProperties().executionIsolationStrategy().Value.equals(ExecutionIsolationStrategy.Thread);
         //            }
 
 
@@ -2459,7 +2459,7 @@ using System.Threading;
 
         //            public boolean isCommandRunningInThread()
         //            {
-        //                return super.GetProperties().executionIsolationStrategy().Get().equals(ExecutionIsolationStrategy.Thread);
+        //                return super.GetProperties().executionIsolationStrategy().Value.equals(ExecutionIsolationStrategy.Thread);
         //            }
 
 

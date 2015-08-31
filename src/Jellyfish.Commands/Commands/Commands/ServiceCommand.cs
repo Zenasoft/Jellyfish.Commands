@@ -103,7 +103,7 @@ namespace Jellyfish.Commands
             get
             {
                 if (_taskscheduler == null)
-                    _taskscheduler = TaskSchedulerFactory.CreateOrRetrieve(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Get(), _threadPoolKey);
+                    _taskscheduler = TaskSchedulerFactory.CreateOrRetrieve(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Value, _threadPoolKey);
                 return _taskscheduler;
             }
             set { _taskscheduler = value; }
@@ -168,7 +168,7 @@ namespace Jellyfish.Commands
                 return flags;
             });
 
-            var executionPolicy = Properties.ExecutionIsolationStrategy.Get();
+            var executionPolicy = Properties.ExecutionIsolationStrategy.Value;
             if (executionPolicy == ExecutionIsolationStrategy.Semaphore)
                 _flags |= ServiceCommandOptions.SemaphoreExecutionStrategy;
             if (executionPolicy == ExecutionIsolationStrategy.Thread)
@@ -176,16 +176,16 @@ namespace Jellyfish.Commands
 
             Metrics = metrics ?? CommandMetricsFactory.GetInstance(CommandName, CommandGroup, Properties, _clock);
 
-            _circuitBreaker = circuitBreaker ?? (Properties.CircuitBreakerEnabled.Get() ? CircuitBreakerFactory.GetOrCreateInstance(CommandName, Properties, Metrics, _clock) : new NoOpCircuitBreaker());
+            _circuitBreaker = circuitBreaker ?? (Properties.CircuitBreakerEnabled.Value ? CircuitBreakerFactory.GetOrCreateInstance(CommandName, Properties, Metrics, _clock) : new NoOpCircuitBreaker());
 
             context.MetricsPublisher.CreateOrRetrievePublisherForCommand(CommandGroup, Metrics, _circuitBreaker);
 
-            if (Properties.RequestLogEnabled.Get())
+            if (Properties.RequestLogEnabled.Value)
             {
                 _currentRequestLog = context.GetRequestLog();
             }
 
-            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasCacheKey && Properties.RequestCacheEnabled.Get())
+            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasCacheKey && Properties.RequestCacheEnabled.Value)
             {
                 _requestCache = context.GetCache<CacheItem>(CommandName);
             }
@@ -221,7 +221,7 @@ namespace Jellyfish.Commands
         {
             get
             {
-                return Properties.CircuitBreakerForceOpen.Get() || (!Properties.CircuitBreakerForceClosed.Get() && _circuitBreaker.IsOpen());
+                return Properties.CircuitBreakerForceOpen.Value || (!Properties.CircuitBreakerForceClosed.Value && _circuitBreaker.IsOpen());
             }
         }
 
@@ -478,8 +478,8 @@ namespace Jellyfish.Commands
                         try
                         {
                             // if bulkhead by thread                            
-                            var token = Properties.ExecutionTimeoutEnabled.Get()
-                                ? new CancellationTokenSource(Properties.ExecutionTimeoutInMilliseconds.Get())
+                            var token = Properties.ExecutionTimeoutEnabled.Value
+                                ? new CancellationTokenSource(Properties.ExecutionTimeoutInMilliseconds.Value)
                                 : new CancellationTokenSource();
                             try
                             {
@@ -686,7 +686,7 @@ namespace Jellyfish.Commands
 
                 _executionResult.AddEvent(eventType);
 
-                if ((_flags & ServiceCommandOptions.HasFallBack) != ServiceCommandOptions.HasFallBack || Properties.FallbackEnabled.Get() == false)
+                if ((_flags & ServiceCommandOptions.HasFallBack) != ServiceCommandOptions.HasFallBack || Properties.FallbackEnabled.Value == false)
                 {
                     throw new CommandRuntimeException(failureType, CommandName, GetLogMessagePrefix() + " " + message + " and fallback disabled.", ex, null);
                 }
@@ -784,7 +784,7 @@ namespace Jellyfish.Commands
         ///
         protected void RecordExecutedCommand()
         {
-            if (Properties.RequestLogEnabled.Get())
+            if (Properties.RequestLogEnabled.Value)
             {
                 // log this command execution regardless of what happened
                 if (_currentRequestLog != null)

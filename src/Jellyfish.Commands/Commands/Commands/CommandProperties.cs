@@ -2,8 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics.Contracts;
+
 using Jellyfish.Configuration;
+using Microsoft.Framework.Internal;
 
 namespace Jellyfish.Commands
 {
@@ -166,18 +167,16 @@ namespace Jellyfish.Commands
         public IDynamicProperty<bool> ExecutionTimeoutEnabled { get; private set; }
 
 
-      private IDynamicProperty<TValue> Get<TValue>(string name, TValue defaultValue) where TValue : struct
+      private IDynamicProperty<TValue> Get<TValue>([NotNull]string name, TValue defaultValue) where TValue : struct
         {
             return DynamicProperties.Factory.AsChainedProperty<TValue>(
-                defaultValue,
                 "jellyFish.command." + _commandName + "." + name,
+                defaultValue,
                 "jellyFish.command.default." + name);
         }
 
-        internal CommandProperties(string commandName)
+        internal CommandProperties([NotNull]string commandName)
         {
-            Contract.Requires(!String.IsNullOrEmpty(commandName));
-
             this._commandName = commandName;
             CircuitBreakerForceClosed = this.Get<bool>("circuitBreaker.forceClosed", default_circuitBreakerForceClosed);
             CircuitBreakerForceOpen = this.Get<bool>("circuitBreaker.forceOpen", default_circuitBreakerForceOpen);

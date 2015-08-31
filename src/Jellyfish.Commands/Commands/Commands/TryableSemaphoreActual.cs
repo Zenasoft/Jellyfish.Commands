@@ -22,7 +22,7 @@ namespace Jellyfish.Commands
         public bool TryAcquire()
         {
             int currentCount = (int)Interlocked.Increment(ref count);
-            if (currentCount > NumberOfPermits.Get())
+            if (currentCount > NumberOfPermits.Value)
             {
                 Interlocked.Decrement(ref count);
                 return false;
@@ -48,7 +48,7 @@ namespace Jellyfish.Commands
 
         public override string ToString()
         {
-            return "Max=" + NumberOfPermits.Get().ToString();
+            return "Max=" + NumberOfPermits.Value.ToString();
         }
     }
 }

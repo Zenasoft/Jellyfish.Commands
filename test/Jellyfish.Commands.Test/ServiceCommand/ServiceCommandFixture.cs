@@ -1533,7 +1533,7 @@ namespace Jellyfish.Commands.Tests
         //    var sharedSemaphore = new TryableSemaphoreActual(DynamicProperties.Factory.AsProperty(3));
 
         //    // used to wait until all commands have started
-        //    CountDownLatch startLatch = new CountDownLatch((sharedSemaphore.NumberOfPermits.Get() * 2) + 1);
+        //    CountDownLatch startLatch = new CountDownLatch((sharedSemaphore.NumberOfPermits.Value * 2) + 1);
 
         //    // used to signal that all command can finish
         //    CountDownLatch sharedLatch = new CountDownLatch(1);
@@ -1556,7 +1556,7 @@ namespace Jellyfish.Commands.Tests
 
         //    // creates group of threads each using command sharing a single semaphore
         //    // I create extra threads and commands so that I can verify that some of them fail to obtain a semaphore
-        //    int sharedThreadCount = sharedSemaphore.NumberOfPermits.Get() * 2;
+        //    int sharedThreadCount = sharedSemaphore.NumberOfPermits.Value * 2;
         //    var sharedSemaphoreTasks = new Task[sharedThreadCount];
         //    for (int i = 0; i < sharedThreadCount; i++)
         //    {
@@ -1606,9 +1606,9 @@ namespace Jellyfish.Commands.Tests
         //    // verifies that all semaphores are in use
 
         //    Assert.Equal( // "immediately after command start, all shared semaphores should be in-use"
-        //            sharedSemaphore.NumberOfPermits.Get(), sharedSemaphore.NumberOfPermitsUsed);
+        //            sharedSemaphore.NumberOfPermits.Value, sharedSemaphore.NumberOfPermitsUsed);
         //    Assert.Equal( // "immediately after command start, isolated semaphore should be in-use"
-        //            isolatedSemaphore.NumberOfPermits.Get(), isolatedSemaphore.NumberOfPermitsUsed);
+        //            isolatedSemaphore.NumberOfPermits.Value, isolatedSemaphore.NumberOfPermitsUsed);
 
         //    // signals commands to finish
         //    sharedLatch.countDown();
@@ -1636,7 +1636,7 @@ namespace Jellyfish.Commands.Tests
 
         //    // verifies that some executions failed
         //    Assert.Equal(// "expected some of shared semaphore commands to get rejected",
-        //        sharedSemaphore.NumberOfPermits.Get(), failureCount.Get());
+        //        sharedSemaphore.NumberOfPermits.Value, failureCount.Value);
 
         //    Assert.Equal(0, circuitBreaker.Metrics.CurrentConcurrentExecutionCount);
         //}
@@ -1751,8 +1751,8 @@ namespace Jellyfish.Commands.Tests
             var sb = new StringBuilder();
             sb.AppendFormat("Create command from {0}", commandName);
             sb.AppendLine();
-            sb.AppendFormat("Command {0}, timeout {1}", cmd.CommandName, cmd.Properties.ExecutionTimeoutEnabled.Get() ? cmd.Properties.ExecutionTimeoutInMilliseconds.Get().ToString() : "<none>");
-            sb.AppendLine(); sb.AppendFormat("fallback max {0}", cmd.Properties.FallbackEnabled.Get() ? cmd.Properties.FallbackIsolationSemaphoreMaxConcurrentRequests.Get().ToString() : "<none>");
+            sb.AppendFormat("Command {0}, timeout {1}", cmd.CommandName, cmd.Properties.ExecutionTimeoutEnabled.Value ? cmd.Properties.ExecutionTimeoutInMilliseconds.Value.ToString() : "<none>");
+            sb.AppendLine(); sb.AppendFormat("fallback max {0}", cmd.Properties.FallbackEnabled.Value ? cmd.Properties.FallbackIsolationSemaphoreMaxConcurrentRequests.Value.ToString() : "<none>");
             sb.AppendLine();
             sb.AppendFormat("exec semaphore {0}", cmd.ExecutionSemaphore.ToString());
             sb.AppendLine();

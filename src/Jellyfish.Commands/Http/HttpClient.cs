@@ -1,11 +1,12 @@
 ﻿// Copyright (c) Zenasoft. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.Framework.Internal;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
+
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -40,28 +41,24 @@ namespace Jellyfish.Commands.Http
 
         public static HttpClientBuilder Create(int port, string correlationId=null, string version = null)
         {
-            Contract.Assert(port > 1024);
+            if (port < 1024) throw new ArgumentOutOfRangeException("Port must be greater than 1024");
 
             return new HttpClientBuilder(new UriBuilder("http", "localhost", port).Uri, version, correlationId);
         }
 
-        public static HttpClientBuilder Create(Uri uri, string version=null, string correlationId=null)
+        public static HttpClientBuilder Create([NotNull]Uri uri, string version=null, string correlationId=null)
         {
-            Contract.Assert(uri != null);
-
             return new HttpClientBuilder(uri, version, correlationId);
         }
 
-        public HttpClientBuilder WithContentType(string contentType)
+        public HttpClientBuilder WithContentType([NotNull]string contentType)
         {
-            Contract.Assert(!String.IsNullOrEmpty(contentType));
             _contentType = contentType;
             return this;
         }
 
-        public HttpClientBuilder WithHandlers(IEnumerable<HttpClientHandler> handlers)
+        public HttpClientBuilder WithHandlers([NotNull]IEnumerable<HttpClientHandler> handlers)
         {
-            Contract.Assert(handlers != null);
             _handlers = handlers.ToArray();
             return this;
         }
@@ -78,27 +75,22 @@ namespace Jellyfish.Commands.Http
             return this;
         }
 
-        public HttpClientBuilder SetContent(string content)
+        public HttpClientBuilder SetContent([NotNull]string content)
         {
-            Contract.Assert(content != null);
             _content = content;
             return this;
         }
 
-        public HttpClientBuilder SetHeader(string key, string value)
+        public HttpClientBuilder SetHeader([NotNull]string key, [NotNull]string value)
         {
-            Contract.Assert(key != null);
-            Contract.Assert(value != null);
             if (_requestHeaders == null)
                 _requestHeaders = new Dictionary<string, string>();
             _requestHeaders[key] = value;
             return this;
         }
 
-        public async Task<ServiceHttpResponse> ExecuteAsync(string path, CancellationToken token)
+        public async Task<ServiceHttpResponse> ExecuteAsync([NotNull]string path, CancellationToken token)
         {
-            Contract.Requires(!String.IsNullOrEmpty(path));
-
             var req = new ServiceHttpClient(_uri, _version, _handlers, _timeout);
             return await req.RequestAsync(token, _method, path, _content, true, _requestHeaders, _contentType);
         }
@@ -130,10 +122,8 @@ namespace Jellyfish.Commands.Http
         /// </summary>
         private const string RequestJsonContentType = "application/json";
 
-        public ServiceHttpClient(Uri serviceUri, string pathPrefix, IEnumerable<HttpClientHandler> handlers, TimeSpan timeout)
+        public ServiceHttpClient([NotNull]Uri serviceUri, string pathPrefix, IEnumerable<HttpClientHandler> handlers, TimeSpan timeout)
         {
-            Contract.Assert(serviceUri != null);
-
             _pathPrefix = pathPrefix;
             _serviceUri = serviceUri;
             _client = new HttpClient(CreatePipeline(handlers));

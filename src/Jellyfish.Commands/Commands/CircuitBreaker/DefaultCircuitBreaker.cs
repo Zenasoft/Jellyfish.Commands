@@ -3,7 +3,7 @@
 
 using Jellyfish.Commands.Metrics;
 using Jellyfish.Commands.Utils;
-using System.Diagnostics.Contracts;
+using Microsoft.Framework.Internal;
 using System.Threading;
 
 namespace Jellyfish.Commands.CircuitBreaker
@@ -17,11 +17,8 @@ namespace Jellyfish.Commands.CircuitBreaker
         private IClock _clock;
 
 
-        internal DefaultCircuitBreaker(CommandProperties properties, CommandMetrics metrics, IClock clock)
+        internal DefaultCircuitBreaker([NotNull]CommandProperties properties, [NotNull]CommandMetrics metrics, [NotNull]IClock clock)
         {
-            Contract.Requires(clock != null);
-            Contract.Requires(properties != null);
-            Contract.Requires(metrics != null);
             _clock = clock;
             _properties = properties;
             _metrics = metrics;
@@ -31,10 +28,10 @@ namespace Jellyfish.Commands.CircuitBreaker
         {
             get
             {
-                if (_properties.CircuitBreakerForceOpen.Get())
+                if (_properties.CircuitBreakerForceOpen.Value)
                     return false;
 
-                if (_properties.CircuitBreakerForceClosed.Get())
+                if (_properties.CircuitBreakerForceClosed.Value)
                 {
                     // we still want to allow isOpen() to perform it's calculations so we simulate normal behavior
                     IsOpen();
@@ -50,7 +47,7 @@ namespace Jellyfish.Commands.CircuitBreaker
             long timeCircuitOpenedOrWasLastTested = Interlocked.Read(ref _circuitOpenedOrLastTestedTime);
             // 1) if the circuit is open
             // 2) and it's been longer than 'sleepWindow' since we opened the circuit
-            if (Interlocked.Read(ref _circuitOpen) == 1 && _clock.EllapsedTimeInMs > timeCircuitOpenedOrWasLastTested + _properties.CircuitBreakerSleepWindowInMilliseconds.Get())
+            if (Interlocked.Read(ref _circuitOpen) == 1 && _clock.EllapsedTimeInMs > timeCircuitOpenedOrWasLastTested + _properties.CircuitBreakerSleepWindowInMilliseconds.Value)
             {
                 // We push the 'circuitOpenedTime' ahead by 'sleepWindow' since we have allowed one request to try.
                 // If it succeeds the circuit will be closed, otherwise another singleTest will be allowed at the end of the 'sleepWindow'.
@@ -76,13 +73,13 @@ namespace Jellyfish.Commands.CircuitBreaker
             HealthCounts health = _metrics.GetHealthCounts();
 
             // check if we are past the statisticalWindowVolumeThreshold
-            if (health.TotalRequests < _properties.CircuitBreakerRequestVolumeThreshold.Get())
+            if (health.TotalRequests < _properties.CircuitBreakerRequestVolumeThreshold.Value)
             {
                 // we are not past the minimum volume threshold for the statisticalWindow so we'll return false immediately and not calculate anything
                 return false;
             }
 
-            if (health.ErrorPercentage < _properties.CircuitBreakerErrorThresholdPercentage.Get())
+            if (health.ErrorPercentage < _properties.CircuitBreakerErrorThresholdPercentage.Value)
             {
                 return false;
             }

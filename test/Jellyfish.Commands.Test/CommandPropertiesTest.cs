@@ -47,7 +47,7 @@ namespace Jellyfish.Commands.Tests
                     .Build("unitTestPrefix");
 
             // the builder override should take precedence over the default
-            Assert.Equal(true, properties.CircuitBreakerForceClosed.Get());
+            Assert.Equal(true, properties.CircuitBreakerForceClosed.Value);
         }
 
         [Fact]
@@ -58,7 +58,7 @@ namespace Jellyfish.Commands.Tests
                      .WithCircuitBreakerForceClosed(false).Build("unitTestPrefix");
 
             // the builder override should take precedence over the default
-            Assert.Equal(false, properties.CircuitBreakerForceClosed.Get());
+            Assert.Equal(false, properties.CircuitBreakerForceClosed.Value);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Jellyfish.Commands.Tests
         {
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder().Build("unitTestPrefix");
-            Assert.Equal(CommandProperties.default_circuitBreakerForceClosed, properties.CircuitBreakerForceClosed.Get());
+            Assert.Equal(CommandProperties.default_circuitBreakerForceClosed, properties.CircuitBreakerForceClosed.Value);
         }
 
         [Fact]
@@ -74,13 +74,11 @@ namespace Jellyfish.Commands.Tests
         {
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder().Build("unitTestPrefix");
-            DynamicProperties.Instance.SetProperty("jellyfish.command.default.circuitBreaker.forceClosed", true);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyfish.command.default.circuitBreaker.forceClosed", true);
 
             // the global dynamic property should take precedence over the default
-            Assert.Equal(true, properties.CircuitBreakerForceClosed.Get());
+            Assert.Equal(true, properties.CircuitBreakerForceClosed.Value);
 
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.circuitBreaker.forceClosed");
         }
 
         [Fact]
@@ -89,13 +87,10 @@ namespace Jellyfish.Commands.Tests
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder()
                      .WithCircuitBreakerForceClosed(true).Build("unitTestPrefix");
-            DynamicProperties.Instance.SetProperty("jellyFish.command.default.circuitBreaker.forceClosed", false);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.default.circuitBreaker.forceClosed", false);
 
             // the builder injected should take precedence over the global dynamic property
-            Assert.Equal(true, properties.CircuitBreakerForceClosed.Get());
-
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.circuitBreaker.forceClosed");
+            Assert.Equal(true, properties.CircuitBreakerForceClosed.Value);
         }
 
         [Fact]
@@ -104,13 +99,10 @@ namespace Jellyfish.Commands.Tests
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder()
                      .WithCircuitBreakerForceClosed(false).Build("unitTestPrefix");
-            DynamicProperties.Instance.SetProperty("jellyFish.command.default.circuitBreaker.forceClosed", true);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.default.circuitBreaker.forceClosed", true);
 
             // the builder injected should take precedence over the global dynamic property
-            Assert.Equal(false, properties.CircuitBreakerForceClosed.Get());
-
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.circuitBreaker.forceClosed");
+            Assert.Equal(false, properties.CircuitBreakerForceClosed.Value);
         }
 
         [Fact]
@@ -119,15 +111,11 @@ namespace Jellyfish.Commands.Tests
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder()
                      .WithCircuitBreakerForceClosed(false).Build("TEST");
-            DynamicProperties.Instance.SetProperty("jellyFish.command.default.circuitBreaker.forceClosed", false);
-            DynamicProperties.Instance.SetProperty("jellyFish.command.TEST.circuitBreaker.forceClosed", true);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.default.circuitBreaker.forceClosed", false);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.TEST.circuitBreaker.forceClosed", true);
 
             // the instance specific dynamic property should take precedence over everything
-            Assert.Equal(true, properties.CircuitBreakerForceClosed.Get());
-
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.circuitBreaker.forceClosed");
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.TEST.circuitBreaker.forceClosed");
+            Assert.Equal(true, properties.CircuitBreakerForceClosed.Value);
         }
 
         [Fact]
@@ -138,7 +126,7 @@ namespace Jellyfish.Commands.Tests
                      .WithMetricsRollingStatisticalWindowInMilliseconds(5000).Build("unitTestPrefix");
 
             // the builder override should take precedence over the default
-            Assert.Equal(5000, properties.MetricsRollingStatisticalWindowInMilliseconds.Get());
+            Assert.Equal(5000, properties.MetricsRollingStatisticalWindowInMilliseconds.Value);
         }
 
         [Fact]
@@ -146,7 +134,7 @@ namespace Jellyfish.Commands.Tests
         {
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder().Build("unitTestPrefix");
-            Assert.Equal(CommandProperties.default_metricsRollingStatisticalWindow, properties.MetricsRollingStatisticalWindowInMilliseconds.Get());
+            Assert.Equal(CommandProperties.default_metricsRollingStatisticalWindow, properties.MetricsRollingStatisticalWindowInMilliseconds.Value);
         }
 
         [Fact]
@@ -154,13 +142,10 @@ namespace Jellyfish.Commands.Tests
         {
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder().Build("unitTestPrefix");
-            DynamicProperties.Instance.SetProperty("jellyFish.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
 
             // the global dynamic property should take precedence over the default
-            Assert.Equal(1234, properties.MetricsRollingStatisticalWindowInMilliseconds.Get());
-
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.metrics.rollingStats.timeInMilliseconds");
+            Assert.Equal(1234, properties.MetricsRollingStatisticalWindowInMilliseconds.Value);
         }
 
         [Fact]
@@ -169,13 +154,10 @@ namespace Jellyfish.Commands.Tests
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder()
                      .WithMetricsRollingStatisticalWindowInMilliseconds(5000).Build("unitTestPrefix");
-            DynamicProperties.Instance.SetProperty("jellyFish.command.default.rollingStats.timeInMilliseconds", 3456);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.default.rollingStats.timeInMilliseconds", 3456);
 
             // the builder injected should take precedence over the global dynamic property
-            Assert.Equal(5000, properties.MetricsRollingStatisticalWindowInMilliseconds.Get());
-
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.rollingStats.timeInMilliseconds");
+            Assert.Equal(5000, properties.MetricsRollingStatisticalWindowInMilliseconds.Value);
         }
 
         [Fact]
@@ -184,15 +166,11 @@ namespace Jellyfish.Commands.Tests
             DynamicProperties.Instance.Reset();
             CommandProperties properties = new CommandPropertiesBuilder()
                      .WithMetricsRollingStatisticalWindowInMilliseconds(5000).Build("TEST");
-            DynamicProperties.Instance.SetProperty("jellyFish.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
-            DynamicProperties.Instance.SetProperty("jellyFish.command.TEST.metrics.rollingStats.timeInMilliseconds", 3456);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
+            DynamicProperties.Instance.CreateOrUpdateProperty("jellyFish.command.TEST.metrics.rollingStats.timeInMilliseconds", 3456);
 
             // the instance specific dynamic property should take precedence over everything
-            Assert.Equal(3456, properties.MetricsRollingStatisticalWindowInMilliseconds.Get());
-
-            // cleanup 
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.default.metrics.rollingStats.timeInMilliseconds");
-            DynamicProperties.Instance.RemoveProperty("jellyFish.command.TEST.metrics.rollingStats.timeInMilliseconds");
+            Assert.Equal(3456, properties.MetricsRollingStatisticalWindowInMilliseconds.Value);
         }
 
     }

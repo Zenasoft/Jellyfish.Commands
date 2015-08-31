@@ -190,22 +190,22 @@ namespace Jellyfish.Commands.Metrics.Publishers
             // property values for reporting what is actually seen by the command rather than what was set somewhere
             var commandProperties = commandMetrics.Properties;
 
-            json.writeNumberField("propertyValue_circuitBreakerRequestVolumeThreshold", commandProperties.CircuitBreakerRequestVolumeThreshold.Get());
-            json.writeNumberField("propertyValue_circuitBreakerSleepWindowInMilliseconds", commandProperties.CircuitBreakerSleepWindowInMilliseconds.Get());
-            json.writeNumberField("propertyValue_circuitBreakerErrorThresholdPercentage", commandProperties.CircuitBreakerErrorThresholdPercentage.Get());
-            json.writeBooleanField("propertyValue_circuitBreakerForceOpen", commandProperties.CircuitBreakerForceOpen.Get());
-            json.writeBooleanField("propertyValue_circuitBreakerForceClosed", commandProperties.CircuitBreakerForceClosed.Get());
-            json.writeBooleanField("propertyValue_circuitBreakerEnabled", commandProperties.CircuitBreakerEnabled.Get());
+            json.writeNumberField("propertyValue_circuitBreakerRequestVolumeThreshold", commandProperties.CircuitBreakerRequestVolumeThreshold.Value);
+            json.writeNumberField("propertyValue_circuitBreakerSleepWindowInMilliseconds", commandProperties.CircuitBreakerSleepWindowInMilliseconds.Value);
+            json.writeNumberField("propertyValue_circuitBreakerErrorThresholdPercentage", commandProperties.CircuitBreakerErrorThresholdPercentage.Value);
+            json.writeBooleanField("propertyValue_circuitBreakerForceOpen", commandProperties.CircuitBreakerForceOpen.Value);
+            json.writeBooleanField("propertyValue_circuitBreakerForceClosed", commandProperties.CircuitBreakerForceClosed.Value);
+            json.writeBooleanField("propertyValue_circuitBreakerEnabled", commandProperties.CircuitBreakerEnabled.Value);
 
             //json.writeStringField("propertyValue_executionIsolationStrategy", commandProperties.ExecutionIsolationStrategy().get().name());
-            //json.writeNumberField("propertyValue_executionIsolationThreadTimeoutInMilliseconds", commandProperties.ExecutionTimeoutInMilliseconds().Get());
-            json.writeNumberField("propertyValue_executionTimeoutInMilliseconds", commandProperties.ExecutionTimeoutInMilliseconds.Get());
+            //json.writeNumberField("propertyValue_executionIsolationThreadTimeoutInMilliseconds", commandProperties.ExecutionTimeoutInMilliseconds().Value);
+            json.writeNumberField("propertyValue_executionTimeoutInMilliseconds", commandProperties.ExecutionTimeoutInMilliseconds.Value);
             //json.writeBooleanField("propertyValue_executionIsolationThreadInterruptOnTimeout", commandProperties.executionIsolationThreadInterruptOnTimeout().get());
             //json.writeStringField("propertyValue_executionIsolationThreadPoolKeyOverride", commandProperties.executionIsolationThreadPoolKeyOverride().get());
-            json.writeNumberField("propertyValue_executionIsolationSemaphoreMaxConcurrentRequests", commandProperties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Get());
-            json.writeNumberField("propertyValue_fallbackIsolationSemaphoreMaxConcurrentRequests", commandProperties.FallbackIsolationSemaphoreMaxConcurrentRequests.Get());
+            json.writeNumberField("propertyValue_executionIsolationSemaphoreMaxConcurrentRequests", commandProperties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Value);
+            json.writeNumberField("propertyValue_fallbackIsolationSemaphoreMaxConcurrentRequests", commandProperties.FallbackIsolationSemaphoreMaxConcurrentRequests.Value);
 
-            json.writeNumberField("propertyValue_metricsRollingStatisticalWindowInMilliseconds", commandProperties.MetricsRollingStatisticalWindowInMilliseconds.Get());
+            json.writeNumberField("propertyValue_metricsRollingStatisticalWindowInMilliseconds", commandProperties.MetricsRollingStatisticalWindowInMilliseconds.Value);
 
             //json.writeBooleanField("propertyValue_requestCacheEnabled", commandProperties.requestCacheEnabled().get());
             //json.writeBooleanField("propertyValue_requestLogEnabled", commandProperties.requestLogEnabled().get());

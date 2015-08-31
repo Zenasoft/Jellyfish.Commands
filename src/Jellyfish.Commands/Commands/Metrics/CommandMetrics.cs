@@ -5,9 +5,10 @@ using Jellyfish.Commands.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
+
 using System.Threading;
 using System.Linq;
+using Microsoft.Framework.Internal;
 
 namespace Jellyfish.Commands.Metrics
 {
@@ -20,11 +21,8 @@ namespace Jellyfish.Commands.Metrics
             Interlocked.Exchange(ref _metrics, new ConcurrentDictionary<string, CommandMetrics>());
         }
 
-        public static CommandMetrics GetInstance(string name, string commandGroup, CommandProperties properties, IClock clock)
+        public static CommandMetrics GetInstance([NotNull]string name, [NotNull]string commandGroup, [NotNull]CommandProperties properties, IClock clock)
         {
-            Contract.Assert(!String.IsNullOrEmpty(name));
-            Contract.Assert(properties != null);
-
             return _metrics.GetOrAdd(name, n => new CommandMetrics(n, commandGroup, properties, clock));
         }
 
@@ -49,15 +47,15 @@ namespace Jellyfish.Commands.Metrics
 
         public CommandProperties Properties { get { return _properties; } }
 
-        internal CommandMetrics(string name, string commandGroup, CommandProperties properties, IClock clock=null)
+        internal CommandMetrics([NotNull]string name, [NotNull]string commandGroup, [NotNull]CommandProperties properties, IClock clock=null)
         {
             CommandGroup = commandGroup;
             _clock = clock ?? Clock.GetInstance();
             this._properties = properties;
             CommandName = name;
-            _counter = new RollingNumber(_clock, properties.MetricsRollingStatisticalWindowInMilliseconds.Get(), properties.MetricsRollingStatisticalWindowBuckets.Get());
-            _percentileExecution = new RollingPercentileNumber(_clock, properties.MetricsRollingPercentileWindowInMilliseconds.Get(), properties.MetricsRollingPercentileWindowBuckets.Get(), properties.MetricsRollingPercentileBucketSize.Get(), properties.MetricsRollingPercentileEnabled);
-            _percentileTotal = new RollingPercentileNumber(_clock, properties.MetricsRollingPercentileWindowInMilliseconds.Get(), properties.MetricsRollingPercentileWindowBuckets.Get(), properties.MetricsRollingPercentileBucketSize.Get(), properties.MetricsRollingPercentileEnabled);
+            _counter = new RollingNumber(_clock, properties.MetricsRollingStatisticalWindowInMilliseconds.Value, properties.MetricsRollingStatisticalWindowBuckets.Value);
+            _percentileExecution = new RollingPercentileNumber(_clock, properties.MetricsRollingPercentileWindowInMilliseconds.Value, properties.MetricsRollingPercentileWindowBuckets.Value, properties.MetricsRollingPercentileBucketSize.Value, properties.MetricsRollingPercentileEnabled);
+            _percentileTotal = new RollingPercentileNumber(_clock, properties.MetricsRollingPercentileWindowInMilliseconds.Value, properties.MetricsRollingPercentileWindowBuckets.Value, properties.MetricsRollingPercentileBucketSize.Value, properties.MetricsRollingPercentileEnabled);
         }
 
         public int CurrentConcurrentExecutionCount { get { return _concurrentExecutionCount; } }
@@ -186,7 +184,7 @@ namespace Jellyfish.Commands.Metrics
             long lastTime = this.lastHealthCountsSnapshot;
             long currentTime = _clock.EllapsedTimeInMs;
 
-            if ( currentTime - lastTime >= this._properties.MetricsHealthSnapshotIntervalInMilliseconds.Get() || healthCountsSnapshot.IsEmpty)
+            if ( currentTime - lastTime >= this._properties.MetricsHealthSnapshotIntervalInMilliseconds.Value || healthCountsSnapshot.IsEmpty)
             {
                 if (Interlocked.CompareExchange(ref this.lastHealthCountsSnapshot, currentTime, lastTime) == lastTime)
                 {
