@@ -169,7 +169,7 @@ namespace Jellyfish.Commands
             });
 
             var executionPolicy = Properties.ExecutionIsolationStrategy.Value;
-            if (executionPolicy == ExecutionIsolationStrategy.Semaphore)
+            if (executionPolicy == ExecutionIsolationStrategy.Semaphore) 
                 _flags |= ServiceCommandOptions.SemaphoreExecutionStrategy;
             if (executionPolicy == ExecutionIsolationStrategy.Thread)
                 _flags |= ServiceCommandOptions.ThreadExecutionStrategy;

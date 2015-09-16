@@ -15,7 +15,7 @@
     "projectUrl": "https://github.com/zenasoft/Jellyfish.Commands",
     "dependencies": {
         "Newtonsoft.Json": "7.0.1",
-        "System.Net.Http": "4.0.0",
+        "System.Net.Http": "4.0.0", 
         "Jellyfish.Configuration": "1.0.0-beta2-*",
       "Microsoft.Framework.Logging.Abstractions": "1.0.0-beta7",
       "Microsoft.Framework.NotNullAttribute.Sources": "1.0.0-beta7"

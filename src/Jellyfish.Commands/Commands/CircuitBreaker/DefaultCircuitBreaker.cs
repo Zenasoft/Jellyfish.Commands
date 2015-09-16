@@ -13,7 +13,7 @@ namespace Jellyfish.Commands.CircuitBreaker
         private long _circuitOpen;
         private CommandMetrics _metrics;
         private CommandProperties _properties;
-        private long _circuitOpenedOrLastTestedTime;
+        private long _circuitOpenedOrLastTestedTime; 
         private IClock _clock;
 
 
