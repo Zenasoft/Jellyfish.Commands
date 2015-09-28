@@ -25,6 +25,8 @@ namespace Sample.HttpCommand.Commands
         protected override async Task<string> Run(CancellationToken token)
         {
             await Task.Delay(200, token);
+
+            // Simple http request
             var response = await Jellyfish.Commands.Http.HttpClientBuilder.Create(new Uri("https://www.myget.org/F/jellyfish/api/v2"), null)
                             .ExecuteAsync("/FindPackagesById()?id='" + _id + "'", token);
 

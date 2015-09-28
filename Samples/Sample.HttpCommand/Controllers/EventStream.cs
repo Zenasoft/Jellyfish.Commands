@@ -43,11 +43,7 @@ namespace Sample.HttpCommand.Controllers
             var url = context.Request.Path.Value ?? string.Empty;
             if (!url.StartsWith("/jellyfish.stream", StringComparison.OrdinalIgnoreCase))
             {
-                context.Response.StatusCode=200;
-                    context.Response.ContentType = "text/plain";
-                    var buffer = Encoding.ASCII.GetBytes("Pas good.");
-                    context.Response.Body.Write(buffer, 0, buffer.Length);
-                //await _next(context);
+                await _next(context);
                 return;
             }
           
