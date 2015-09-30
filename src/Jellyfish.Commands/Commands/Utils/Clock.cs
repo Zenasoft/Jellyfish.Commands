@@ -14,7 +14,6 @@ namespace Jellyfish.Commands.Utils
     public sealed class Clock :IClock
     {
         private Stopwatch _sw = new Stopwatch();
-        private long _startTimeInMs;
         private static IClock _instance = new Clock();
 
         public static IClock GetInstance() { return _instance; }
@@ -22,14 +21,19 @@ namespace Jellyfish.Commands.Utils
         private Clock()
         {
             _sw.Start();
-            _startTimeInMs = (long)(DateTime.Now - DateTime.MinValue).TotalMilliseconds;
         }
 
         public long EllapsedTimeInMs
         {
-            get { return _sw.ElapsedMilliseconds; }
-        }
-
-      
+            get
+            {
+                var ms = _sw.ElapsedMilliseconds;
+#if DEBUG
+                /// Very slow clock for debugging (1sec=10sec)
+                ms /= 10000;
+#endif
+                return ms;
+            }
+        }      
     }
 }

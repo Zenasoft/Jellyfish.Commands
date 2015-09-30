@@ -115,7 +115,11 @@ namespace Jellyfish.Commands
                             foreach (var task in _blockingTaskQueue.GetConsumingEnumerable(_disposeCancellation.Token))
                             {
                                 Interlocked.Increment(ref _pendingTasks);
-                                TryExecuteTask(task);
+                                task.ContinueWith(t => { Interlocked.Decrement(ref _pendingTasks); });
+                                try { 
+                                    TryExecuteTask(task);
+                                }
+                                catch { Interlocked.Decrement(ref _pendingTasks); }
                             }
                         }
                         catch (ThreadAbortException)
@@ -127,10 +131,6 @@ namespace Jellyfish.Commands
                             {
                                 Thread.ResetAbort();
                             }
-                        }
-                        finally
-                        {
-                            Interlocked.Decrement(ref _pendingTasks);
                         }
                     }
                 }

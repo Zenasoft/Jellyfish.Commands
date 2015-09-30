@@ -23,7 +23,8 @@ namespace Jellyfish.Commands.Metrics
 
         public static CommandMetrics GetInstance([NotNull]string name, [NotNull]string commandGroup, [NotNull]CommandProperties properties, IClock clock)
         {
-            return _metrics.GetOrAdd(name, n => new CommandMetrics(n, commandGroup, properties, clock));
+            var metrics = _metrics.GetOrAdd(name, n => new CommandMetrics(n, commandGroup, properties, clock));
+            return metrics;
         }
 
         public static IEnumerable<CommandMetrics> GetInstances()

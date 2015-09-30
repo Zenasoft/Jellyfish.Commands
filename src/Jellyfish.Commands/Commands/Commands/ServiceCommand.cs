@@ -20,18 +20,15 @@ namespace Jellyfish.Commands
         Semaphore,
     }
 
-    /**
- * Used to wrap code that will execute potentially risky functionality (typically meaning a service call over the network)
- * with fault and latency tolerance, statistics and performance metrics capture, circuit breaker and bulkhead functionality.
- * This command is essentially a blocking command but provides an Observable facade if used with observe()
- * 
- * @param <R>
- *            the return type
- * 
- * @ThreadSafe
- */
+    ///<summary>
+    /// Used to wrap code that will execute potentially risky functionality (typically meaning a service call over the network)
+    /// with fault and latency tolerance, statistics and performance metrics capture, circuit breaker and bulkhead functionality.
+    ///</summary>
+    /// 
+    /// param <T>  the return type    
     public abstract class ServiceCommand<T> : ServiceCommandInfo
     {
+        #region Properties
         /// Cache item to save value and execution result of a command
         class CacheItem
         {
@@ -108,6 +105,7 @@ namespace Jellyfish.Commands
             }
             set { _taskscheduler = value; }
         }
+        #endregion
 
         /// <summary>
         /// Construct a <see cref="ServiceCommand{T}"/>.
@@ -191,243 +189,6 @@ namespace Jellyfish.Commands
             }
         }
 
-        #region ServiceCommandInfo
-
-        public string ThreadPoolKey
-        {
-            get
-            {
-                return _threadPoolKey;
-            }
-        }
-
-        /**
- * Whether the 'circuit-breaker' is open meaning that <code>execute()</code> will immediately return
- * the <code>getFallback()</code> response and not attempt a Command execution.
- *
- * 4 columns are ForcedOpen | ForcedClosed | CircuitBreaker open due to health ||| Expected Result
- *
- * T | T | T ||| OPEN (true)
- * T | T | F ||| OPEN (true)
- * T | F | T ||| OPEN (true)
- * T | F | F ||| OPEN (true)
- * F | T | T ||| CLOSED (false)
- * F | T | F ||| CLOSED (false)
- * F | F | T ||| OPEN (true)
- * F | F | F ||| CLOSED (false)
- *
- */
-        public bool IsCircuitBreakerOpen
-        {
-            get
-            {
-                return Properties.CircuitBreakerForceOpen.Value || (!Properties.CircuitBreakerForceClosed.Value && _circuitBreaker.IsOpen());
-            }
-        }
-
-        /**
-         * If this command has completed execution either successfully, via fallback or failure.
-         * 
-         * @return bool
-         */
-        public bool IsExecutionComplete
-        {
-            get
-            {
-                return _isExecutionComplete;
-            }
-        }
-
-        /**
-         * Whether the execution occurred in a separate thread.
-         * <p>
-         * This should be called only once execute()/queue()/fireOrForget() are called otherwise it will always return false.
-         * <p>
-         * This specifies if a thread execution actually occurred, not just if it is configured to be executed in a thread.
-         * 
-         * @return bool
-         */
-        public bool IsExecutedInThread
-        {
-            get
-            {
-                return _isExecutedInThread;
-            }
-        }
-
-        /**
-         * Whether the response was returned successfully either by executing <code>run()</code> or from cache.
-         * 
-         * @return bool
-         */
-        public bool IsSuccessfulExecution
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.SUCCESS);
-            }
-        }
-
-        /**
-         * Whether the <code>run()</code> resulted in a failure (exception).
-         * 
-         * @return bool
-         */
-        public bool IsFailedExecution
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.FAILURE);
-            }
-        }
-
-        /**
-         * Get the Throwable/Exception thrown that caused the failure.
-         * <p>
-         * If <code>IsFailedExecution { get == true</code> then this would represent the Exception thrown by the <code>run()</code> method.
-         * <p>
-         * If <code>IsFailedExecution { get == false</code> then this would return null.
-         * 
-         * @return Throwable or null
-         */
-        public Exception FailedExecutionException
-        {
-            get
-            {
-                return _executionResult.Exception;
-            }
-        }
-
-        /**
-         * Whether the response received from was the result of some type of failure
-         * and <code>Fallback { get</code> being called.
-         * 
-         * @return bool
-         */
-        public bool IsResponseFromFallback
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.FALLBACK_SUCCESS);
-            }
-        }
-
-        /**
-         * Whether the response received was the result of a timeout
-         * and <code>Fallback { get</code> being called.
-         * 
-         * @return bool
-         */
-        public bool IsResponseTimedOut
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.TIMEOUT);
-            }
-        }
-
-        /**
-         * Whether the response received was a fallback as result of being
-         * short-circuited (meaning <code>IsCircuitBreakerOpen { get == true</code>) and <code>Fallback { get</code> being called.
-         * 
-         * @return bool
-         */
-        public bool IsResponseShortCircuited
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.SHORT_CIRCUITED);
-            }
-        }
-
-        /**
-         * Whether the response is from cache and <code>run()</code> was not invoked.
-         * 
-         * @return bool
-         */
-        public bool IsResponseFromCache
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.RESPONSE_FROM_CACHE);
-            }
-        }
-
-        /**
-         * Whether the response received was a fallback as result of being
-         * rejected (from thread-pool or semaphore) and <code>Fallback { get</code> being called.
-         * 
-         * @return bool
-         */
-        public bool IsResponseRejected
-        {
-            get
-            {
-                return _executionResult.EventExists(EventType.THREAD_POOL_REJECTED) || _executionResult.EventExists(EventType.SEMAPHORE_REJECTED);
-            }
-        }
-
-        /**
-         * List of CommandEventType enums representing events that occurred during execution.
-         * <p>
-         * Examples of events are SUCCESS, FAILURE, TIMEOUT, and SHORT_CIRCUITED
-         * 
-         * @return {@code List<EventType>}
-         */
-        public List<EventType> ExecutionEvents
-        {
-            get
-            {
-                return _executionResult.events;
-            }
-        }
-
-        /**
-         * The execution time of this command instance in milliseconds, or -1 if not executed.
-         * 
-         * @return int
-         */
-        public int ExecutionTimeInMilliseconds
-        {
-            get
-            {
-                return _executionResult.ExecutionTime;
-            }
-        }
-
-        /**
-         * Time in Nanos when this command instance's run method was called, or -1 if not executed 
-         * for e.g., command threw an exception
-          *
-          * @return long
-         */
-        public long CommandRunStartTimeInMs
-        {
-            get
-            {
-                return _executionResult.CommandRunStartTimeInMs;
-            }
-        }
-
-        private static Exception TimeoutException = new TimeoutException();
-        #endregion
-
-
-        internal void SetFlag(ServiceCommandOptions option, bool set)
-        {
-            if (set)
-                _flags |= option;
-            else
-                _flags &= ~option;
-        }
-
-        private bool IsMethodImplemented(string methodName)
-        {
-            return (this.GetType()
-                        .GetMethod(methodName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                        .DeclaringType != typeof(ServiceCommand<T>));
-        }
-
         public async Task<T> ExecuteAsync()
         {
             /* this is a stateful object so can only be used once */
@@ -501,6 +262,7 @@ namespace Jellyfish.Commands
                                         TaskScheduler
                                     )
                                     .ConfigureAwait(false);
+
                                     result = await t.ConfigureAwait(false);
                                     if (token.IsCancellationRequested)
                                     {
@@ -812,6 +574,243 @@ namespace Jellyfish.Commands
              * whereas 'metrics.addCommandExecutionTime(duration)' is used by stats across many requests.
              */
             _executionResult.ExecutionTime = (int)duration;
+        }
+
+        #region ServiceCommandInfo
+
+        public string ThreadPoolKey
+        {
+            get
+            {
+                return _threadPoolKey;
+            }
+        }
+
+        /**
+ * Whether the 'circuit-breaker' is open meaning that <code>execute()</code> will immediately return
+ * the <code>getFallback()</code> response and not attempt a Command execution.
+ *
+ * 4 columns are ForcedOpen | ForcedClosed | CircuitBreaker open due to health ||| Expected Result
+ *
+ * T | T | T ||| OPEN (true)
+ * T | T | F ||| OPEN (true)
+ * T | F | T ||| OPEN (true)
+ * T | F | F ||| OPEN (true)
+ * F | T | T ||| CLOSED (false)
+ * F | T | F ||| CLOSED (false)
+ * F | F | T ||| OPEN (true)
+ * F | F | F ||| CLOSED (false)
+ *
+ */
+        public bool IsCircuitBreakerOpen
+        {
+            get
+            {
+                return Properties.CircuitBreakerForceOpen.Value || (!Properties.CircuitBreakerForceClosed.Value && _circuitBreaker.IsOpen());
+            }
+        }
+
+        /**
+         * If this command has completed execution either successfully, via fallback or failure.
+         * 
+         * @return bool
+         */
+        public bool IsExecutionComplete
+        {
+            get
+            {
+                return _isExecutionComplete;
+            }
+        }
+
+        /**
+         * Whether the execution occurred in a separate thread.
+         * <p>
+         * This should be called only once execute()/queue()/fireOrForget() are called otherwise it will always return false.
+         * <p>
+         * This specifies if a thread execution actually occurred, not just if it is configured to be executed in a thread.
+         * 
+         * @return bool
+         */
+        public bool IsExecutedInThread
+        {
+            get
+            {
+                return _isExecutedInThread;
+            }
+        }
+
+        /**
+         * Whether the response was returned successfully either by executing <code>run()</code> or from cache.
+         * 
+         * @return bool
+         */
+        public bool IsSuccessfulExecution
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.SUCCESS);
+            }
+        }
+
+        /**
+         * Whether the <code>run()</code> resulted in a failure (exception).
+         * 
+         * @return bool
+         */
+        public bool IsFailedExecution
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.FAILURE);
+            }
+        }
+
+        /**
+         * Get the Throwable/Exception thrown that caused the failure.
+         * <p>
+         * If <code>IsFailedExecution { get == true</code> then this would represent the Exception thrown by the <code>run()</code> method.
+         * <p>
+         * If <code>IsFailedExecution { get == false</code> then this would return null.
+         * 
+         * @return Throwable or null
+         */
+        public Exception FailedExecutionException
+        {
+            get
+            {
+                return _executionResult.Exception;
+            }
+        }
+
+        /**
+         * Whether the response received from was the result of some type of failure
+         * and <code>Fallback { get</code> being called.
+         * 
+         * @return bool
+         */
+        public bool IsResponseFromFallback
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.FALLBACK_SUCCESS);
+            }
+        }
+
+        /**
+         * Whether the response received was the result of a timeout
+         * and <code>Fallback { get</code> being called.
+         * 
+         * @return bool
+         */
+        public bool IsResponseTimedOut
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.TIMEOUT);
+            }
+        }
+
+        /**
+         * Whether the response received was a fallback as result of being
+         * short-circuited (meaning <code>IsCircuitBreakerOpen { get == true</code>) and <code>Fallback { get</code> being called.
+         * 
+         * @return bool
+         */
+        public bool IsResponseShortCircuited
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.SHORT_CIRCUITED);
+            }
+        }
+
+        /**
+         * Whether the response is from cache and <code>run()</code> was not invoked.
+         * 
+         * @return bool
+         */
+        public bool IsResponseFromCache
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.RESPONSE_FROM_CACHE);
+            }
+        }
+
+        /**
+         * Whether the response received was a fallback as result of being
+         * rejected (from thread-pool or semaphore) and <code>Fallback { get</code> being called.
+         * 
+         * @return bool
+         */
+        public bool IsResponseRejected
+        {
+            get
+            {
+                return _executionResult.EventExists(EventType.THREAD_POOL_REJECTED) || _executionResult.EventExists(EventType.SEMAPHORE_REJECTED);
+            }
+        }
+
+        /**
+         * List of CommandEventType enums representing events that occurred during execution.
+         * <p>
+         * Examples of events are SUCCESS, FAILURE, TIMEOUT, and SHORT_CIRCUITED
+         * 
+         * @return {@code List<EventType>}
+         */
+        public List<EventType> ExecutionEvents
+        {
+            get
+            {
+                return _executionResult.events;
+            }
+        }
+
+        /**
+         * The execution time of this command instance in milliseconds, or -1 if not executed.
+         * 
+         * @return int
+         */
+        public int ExecutionTimeInMilliseconds
+        {
+            get
+            {
+                return _executionResult.ExecutionTime;
+            }
+        }
+
+        /**
+         * Time in Nanos when this command instance's run method was called, or -1 if not executed 
+         * for e.g., command threw an exception
+          *
+          * @return long
+         */
+        public long CommandRunStartTimeInMs
+        {
+            get
+            {
+                return _executionResult.CommandRunStartTimeInMs;
+            }
+        }
+
+        private static Exception TimeoutException = new TimeoutException();
+        #endregion
+
+
+        internal void SetFlag(ServiceCommandOptions option, bool set)
+        {
+            if (set)
+                _flags |= option;
+            else
+                _flags &= ~option;
+        }
+
+        private bool IsMethodImplemented(string methodName)
+        {
+            return (this.GetType()
+                        .GetMethod(methodName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        .DeclaringType != typeof(ServiceCommand<T>));
         }
     }
 }

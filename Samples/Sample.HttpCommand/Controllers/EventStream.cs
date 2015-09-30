@@ -79,6 +79,8 @@ namespace Sample.HttpCommand.Controllers
                 
                 while (!context.RequestAborted.IsCancellationRequested) {
                     var events = poller.GetJsonMetrics();
+                    Console.WriteLine("Events : {0}", events.Count());
+
                     var writer = new System.IO.StreamWriter(context.Response.Body);
 
                     if (events.Count() == 0)
@@ -89,7 +91,7 @@ namespace Sample.HttpCommand.Controllers
                     {
                         foreach (var json in events)
                         {
-                            writer.WriteLine("data: " + json + "\n", Encoding.UTF8);
+                            writer.WriteLine("data: " + json + "\n");
                         }
                     }
 
