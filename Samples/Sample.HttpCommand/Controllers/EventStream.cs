@@ -13,10 +13,11 @@ using Jellyfish.Commands;
 
 namespace Microsoft.Framework.DependencyInjection 
 {
-    public static class JellyfishExtensions {    
+    public static class JellyfishExtensions
+    {    
         public static IApplicationBuilder UseJellyfish(this IApplicationBuilder builder)
         {
-            builder.UseMiddleware<Sample.HttpCommand.Controllers.EventStreamHandler>();
+            builder.UseMiddleware<Sample.HttpCommand.Controllers.EventStreamMiddleware>();
             return builder;
         }
 
@@ -29,17 +30,19 @@ namespace Microsoft.Framework.DependencyInjection
 
 namespace Sample.HttpCommand.Controllers
 {
-    public class EventStreamHandler
+    public class EventStreamMiddleware
     {
         private int _nbConnections;
         private IDynamicProperty<int> maxConcurrentConnection = DynamicProperties.Instance.CreateOrUpdateProperty("jellyfish.stream.maxConcurrentConnections", 5);
         private RequestDelegate _next;
         
-        public EventStreamHandler(RequestDelegate next) {
+        public EventStreamMiddleware(RequestDelegate next)
+        {
             _next = next;
         }
         
-        public async Task Invoke(HttpContext context) {
+        public async Task Invoke(HttpContext context)
+        {
             var url = context.Request.Path.Value ?? string.Empty;
             if (!url.StartsWith("/jellyfish.stream", StringComparison.OrdinalIgnoreCase))
             {
@@ -72,42 +75,42 @@ namespace Sample.HttpCommand.Controllers
                 var poller = new MetricsPoller(delay, token.Token);
                 poller.Start();
 
-                context.Response.ContentType = "text /event-stream; charset=UTF-8";
+                context.Response.ContentType = "text /event-stream";
                 context.Response.Headers.Add("Cache-Control", new string[] { "no-cache, no-store, max-age=0, must-revalidate" });
                 context.Response.Headers.Add("Pragma", new string[] { "no-cache" });
+                context.Response.Headers.Add("Connection", new string[] { "keep-alive" });
                 context.Response.StatusCode = 200;
-                
-                while (!context.RequestAborted.IsCancellationRequested) {
-                    var events = poller.GetJsonMetrics();
-                    Console.WriteLine("Events : {0}", events.Count());
 
-                    var writer = new System.IO.StreamWriter(context.Response.Body);
+                var ping = Encoding.UTF8.GetBytes("ping: \n");
+
+                while (!context.RequestAborted.IsCancellationRequested)
+                {
+                    var events = poller.GetJsonMetrics();
 
                     if (events.Count() == 0)
                     {
-                         writer.WriteLine("ping: \n", Encoding.UTF8);
+                        context.Response.Body.Write(ping, 0, ping.Length);
                     }
                     else
                     {
                         foreach (var json in events)
                         {
-                            writer.WriteLine("data: " + json + "\n");
+                            var bytes = Encoding.UTF8.GetBytes(String.Format("data: {0}\n", json));
+                            context.Response.Body.Write(bytes, 0, bytes.Length);
                         }
                     }
-
-                    await writer.FlushAsync();
+                  
                     await context.Response.Body.FlushAsync(token.Token);
 
                     await Task.Delay(delay, token.Token);
                 }
-
-                if(token!=null)
-                    token.Cancel();
             }
             catch { }           
             finally
             {
                 Interlocked.Decrement(ref _nbConnections);
+                if (token != null && !token.IsCancellationRequested)
+                    token.Cancel();
             }
         }         
     }
