@@ -28,10 +28,6 @@ namespace Jellyfish.Commands.Utils
             get
             {
                 var ms = _sw.ElapsedMilliseconds;
-#if DEBUG
-                /// Very slow clock for debugging (1sec=10sec)
-                ms /= 10000;
-#endif
                 return ms;
             }
         }      

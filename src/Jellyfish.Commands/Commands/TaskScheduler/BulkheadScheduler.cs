@@ -116,7 +116,8 @@ namespace Jellyfish.Commands
                             {
                                 Interlocked.Increment(ref _pendingTasks);
                                 task.ContinueWith(t => { Interlocked.Decrement(ref _pendingTasks); });
-                                try { 
+                                try 
+                                { 
                                     TryExecuteTask(task);
                                 }
                                 catch { Interlocked.Decrement(ref _pendingTasks); }
