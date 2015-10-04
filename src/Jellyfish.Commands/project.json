@@ -25,6 +25,6 @@
         "url": "https://github.com/zenasoft/Jellyfish.Commands"
     },
     "frameworks": {
-        "dnx451": { }
+        "dnx451": {}
     }
 }
