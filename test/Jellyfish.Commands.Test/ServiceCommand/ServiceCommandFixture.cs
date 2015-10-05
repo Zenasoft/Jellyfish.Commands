@@ -1751,7 +1751,7 @@ namespace Jellyfish.Commands.Tests
             var sb = new StringBuilder();
             sb.AppendFormat("Create command from {0}", commandName);
             sb.AppendLine();
-            sb.AppendFormat("Command {0}, timeout {1}", cmd.CommandName, cmd.Properties.ExecutionTimeoutEnabled.Value ? cmd.Properties.ExecutionTimeoutInMilliseconds.Value.ToString() : "<none>");
+            sb.AppendFormat("Command {0}, timeout {1}", cmd.CommandName, cmd.Properties.ExecutionTimeoutEnabled.Value ? cmd.Properties.ExecutionIsolationThreadTimeoutInMilliseconds.Value.ToString() : "<none>");
             sb.AppendLine(); sb.AppendFormat("fallback max {0}", cmd.Properties.FallbackEnabled.Value ? cmd.Properties.FallbackIsolationSemaphoreMaxConcurrentRequests.Value.ToString() : "<none>");
             sb.AppendLine();
             sb.AppendFormat("exec semaphore {0}", cmd.ExecutionSemaphore.ToString());

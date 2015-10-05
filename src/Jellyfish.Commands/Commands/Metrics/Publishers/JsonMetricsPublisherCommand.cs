@@ -142,11 +142,8 @@ namespace Jellyfish.Commands.Metrics.Publishers
 
             // rolling counters
             json.writeNumberField("rollingCountBadRequests", commandMetrics.GetRollingCount(RollingNumberEvent.BAD_REQUEST));
-            // json.writeNumberField("rollingCountCollapsedRequests", commandMetrics.GetRollingCount(RollingNumberEvent.COLLAPSED));
-            //json.writeNumberField("rollingCountEmit", commandMetrics.GetRollingCount(RollingNumberEvent.EMIT));
             json.writeNumberField("rollingCountExceptionsThrown", commandMetrics.GetRollingCount(RollingNumberEvent.EXCEPTION_THROWN));
             json.writeNumberField("rollingCountFailure", commandMetrics.GetRollingCount(RollingNumberEvent.FAILURE));
-            //json.writeNumberField("rollingCountEmit", commandMetrics.GetRollingCount(RollingNumberEvent.FALLBACK_EMIT));
             json.writeNumberField("rollingCountFallbackFailure", commandMetrics.GetRollingCount(RollingNumberEvent.FALLBACK_FAILURE));
             json.writeNumberField("rollingCountFallbackRejection", commandMetrics.GetRollingCount(RollingNumberEvent.FALLBACK_REJECTION));
             json.writeNumberField("rollingCountFallbackSuccess", commandMetrics.GetRollingCount(RollingNumberEvent.FALLBACK_SUCCESS));
@@ -196,33 +193,26 @@ namespace Jellyfish.Commands.Metrics.Publishers
             json.writeBooleanField("propertyValue_circuitBreakerForceOpen", commandProperties.CircuitBreakerForceOpen.Value);
             json.writeBooleanField("propertyValue_circuitBreakerForceClosed", commandProperties.CircuitBreakerForceClosed.Value);
             json.writeBooleanField("propertyValue_circuitBreakerEnabled", commandProperties.CircuitBreakerEnabled.Value);
-
-            //json.writeStringField("propertyValue_executionIsolationStrategy", commandProperties.ExecutionIsolationStrategy().get().name());
-            //json.writeNumberField("propertyValue_executionIsolationThreadTimeoutInMilliseconds", commandProperties.ExecutionTimeoutInMilliseconds().Value);
-            json.writeNumberField("propertyValue_executionTimeoutInMilliseconds", commandProperties.ExecutionTimeoutInMilliseconds.Value);
+        
+            json.writeStringField("propertyValue_executionIsolationStrategy", commandProperties.ExecutionIsolationStrategy.Value.ToString());
+            json.writeNumberField("propertyValue_executionIsolationThreadTimeoutInMilliseconds", commandProperties.ExecutionIsolationThreadTimeoutInMilliseconds.Value);
+            json.writeNumberField("propertyValue_executionTimeoutInMilliseconds", commandProperties.ExecutionIsolationThreadTimeoutInMilliseconds.Value);
             //json.writeBooleanField("propertyValue_executionIsolationThreadInterruptOnTimeout", commandProperties.executionIsolationThreadInterruptOnTimeout().get());
             //json.writeStringField("propertyValue_executionIsolationThreadPoolKeyOverride", commandProperties.executionIsolationThreadPoolKeyOverride().get());
             json.writeNumberField("propertyValue_executionIsolationSemaphoreMaxConcurrentRequests", commandProperties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Value);
             json.writeNumberField("propertyValue_fallbackIsolationSemaphoreMaxConcurrentRequests", commandProperties.FallbackIsolationSemaphoreMaxConcurrentRequests.Value);
 
             json.writeNumberField("propertyValue_metricsRollingStatisticalWindowInMilliseconds", commandProperties.MetricsRollingStatisticalWindowInMilliseconds.Value);
-
-            //json.writeBooleanField("propertyValue_requestCacheEnabled", commandProperties.requestCacheEnabled().get());
-            //json.writeBooleanField("propertyValue_requestLogEnabled", commandProperties.requestLogEnabled().get());
+            
+            json.writeBooleanField("propertyValue_requestCacheEnabled", commandProperties.RequestCacheEnabled.Value);
+            json.writeBooleanField("propertyValue_requestLogEnabled", commandProperties.RequestLogEnabled.Value);
 
             json.writeNumberField("reportingHosts", 1); // this will get summed across all instances in a cluster
-            //json.writeStringField("threadPool", commandMetrics.getThreadPoolKey().name());
+                                                        //json.writeStringField("threadPool", commandMetrics.getThreadPoolKey().name());
 
-            /*
-             * The following are commented out as these rarely change and are verbose for streaming for something people don't change.
-             * We could perhaps allow a property or request argument to include these.
-             */
-
-            //                    json.put("propertyValue_metricsRollingPercentileEnabled", commandProperties.metricsRollingPercentileEnabled().get());
-            //                    json.put("propertyValue_metricsRollingPercentileBucketSize", commandProperties.metricsRollingPercentileBucketSize().get());
-            //                    json.put("propertyValue_metricsRollingPercentileWindow", commandProperties.metricsRollingPercentileWindowInMilliseconds().get());
-            //                    json.put("propertyValue_metricsRollingPercentileWindowBuckets", commandProperties.metricsRollingPercentileWindowBuckets().get());
-            //                    json.put("propertyValue_metricsRollingStatisticalWindowBuckets", commandProperties.metricsRollingStatisticalWindowBuckets().get());
+            // Hystrix specific
+            json.writeNumberField("rollingCountCollapsedRequests", 0);
+            json.writeBooleanField("propertyValue_executionIsolationThreadInterruptOnTimeout", false);
 
             json.writeEndObject();
 

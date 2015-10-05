@@ -92,7 +92,7 @@ namespace Jellyfish.Commands
         ///  If the command is semaphore-isolated and a <see cref="ObservableComman"/>, that command will get unsubscribed.
         ///  <p>
         /// </summary> 
-        public IDynamicProperty<int> ExecutionTimeoutInMilliseconds { get; private set; }
+        public IDynamicProperty<int> ExecutionIsolationThreadTimeoutInMilliseconds { get; private set; }
 
         public IDynamicProperty<ExecutionIsolationStrategy> ExecutionIsolationStrategy { get; private set; }
 
@@ -185,7 +185,7 @@ namespace Jellyfish.Commands
             CircuitBreakerSleepWindowInMilliseconds = this.Get<int>("circuitBreaker.sleepWindowInMilliseconds", default_circuitBreakerSleepWindowInMilliseconds);
             FallbackIsolationSemaphoreMaxConcurrentRequests = this.Get<int>("fallback.isolation.semaphore.maxConcurrentRequests", default_fallbackIsolationSemaphoreMaxConcurrentRequests);
             ExecutionIsolationSemaphoreMaxConcurrentRequests = this.Get<int>("execution.isolation.semaphore.maxConcurrentRequests", default_executionIsolationSemaphoreMaxConcurrentRequests);
-            ExecutionTimeoutInMilliseconds = this.Get<int>("execution.isolation.thread.timeoutInMilliseconds", default_executionTimeoutInMilliseconds);
+            ExecutionIsolationThreadTimeoutInMilliseconds = this.Get<int>("execution.isolation.thread.timeoutInMilliseconds", default_executionTimeoutInMilliseconds);
             CircuitBreakerEnabled = this.Get<bool>("circuitBreaker.enabled", default_circuitBreakerEnabled);
             MetricsRollingStatisticalWindowInMilliseconds = this.Get<int>("metrics.rollingStats.timeInMilliseconds", default_metricsRollingStatisticalWindow);
             RequestCacheEnabled = this.Get<bool>("requestCache.enabled", default_requestCacheEnabled);
@@ -251,7 +251,7 @@ namespace Jellyfish.Commands
  //           if( executionIsolationThreadInterruptOnTimeout.HasValue ) cmd.executionIsolationThreadInterruptOnTimeout.Set(executionIsolationThreadInterruptOnTimeout.Value);
 
 
-            if( executionTimeoutInMilliseconds.HasValue ) cmd.ExecutionTimeoutInMilliseconds.Set(executionTimeoutInMilliseconds.Value);
+            if( executionTimeoutInMilliseconds.HasValue ) cmd.ExecutionIsolationThreadTimeoutInMilliseconds.Set(executionTimeoutInMilliseconds.Value);
 
 
             if( executionTimeoutEnabled.HasValue ) cmd.ExecutionTimeoutEnabled.Set(executionTimeoutEnabled.Value);

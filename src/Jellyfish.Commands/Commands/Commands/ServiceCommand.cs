@@ -240,7 +240,7 @@ namespace Jellyfish.Commands
                         {
                             // if bulkhead by thread                            
                             var token = Properties.ExecutionTimeoutEnabled.Value
-                                ? new CancellationTokenSource(Properties.ExecutionTimeoutInMilliseconds.Value)
+                                ? new CancellationTokenSource(Properties.ExecutionIsolationThreadTimeoutInMilliseconds.Value)
                                 : new CancellationTokenSource();
                             try
                             {

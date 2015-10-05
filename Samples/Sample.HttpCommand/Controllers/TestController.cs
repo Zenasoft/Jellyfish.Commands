@@ -9,15 +9,20 @@ using Sample.HttpCommand.Commands;
 namespace Sample.HttpCommand.Controllers
 {
     [Route("api/[controller]")]
-    public class ValuesController : Controller
+    public class TestController : Controller
     {
+        private IJellyfishContext _context;
+
+        public TestController(IJellyfishContext ctx)
+        {
+            _context = ctx;
+        }
+
         // GET api/values/5
         [HttpGet("{id}")]
         public async Task<string> Get(string id)
         {
-            var ctx = (IJellyfishContext)this.Context.RequestServices.GetService(typeof(IJellyfishContext));
-
-            var cmd = new MyCommand(ctx, id);
+            var cmd = new MyCommand(_context, id);
             try
             {
                 return await cmd.ExecuteAsync();
