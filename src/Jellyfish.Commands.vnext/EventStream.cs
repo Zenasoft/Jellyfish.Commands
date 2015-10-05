@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNet.Mvc;
 using System.Threading;
 using System.Text;
 using System.Collections.Concurrent;
@@ -11,13 +10,13 @@ using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Http;
 using Jellyfish.Commands;
 
-namespace Microsoft.Framework.DependencyInjection 
+namespace Microsoft.Framework.DependencyInjection
 {
-    public static class JellyfishExtensions
+    public static class JellyfishExtensions 
     {    
         public static IApplicationBuilder UseJellyfish(this IApplicationBuilder builder)
         {
-            builder.UseMiddleware<Sample.HttpCommand.Controllers.EventStreamMiddleware>();
+            builder.UseMiddleware<Jellyfish.Commands.EventStreamHandler>();
             return builder;
         }
 
@@ -28,21 +27,20 @@ namespace Microsoft.Framework.DependencyInjection
     }
 }
 
-namespace Sample.HttpCommand.Controllers
+namespace Jellyfish.Commands
 {
-    public class EventStreamMiddleware
+    public class EventStreamHandler
     {
         private int _nbConnections;
         private IDynamicProperty<int> maxConcurrentConnection = DynamicProperties.Instance.CreateOrUpdateProperty("jellyfish.stream.maxConcurrentConnections", 5);
         private RequestDelegate _next;
-        
-        public EventStreamMiddleware(RequestDelegate next)
-        {
+         
+         
+        public EventStreamHandler(RequestDelegate next) {
             _next = next;
-        }
-        
-        public async Task Invoke(HttpContext context)
-        {
+        } 
+     
+        public async Task Invoke(HttpContext context) {
             var url = context.Request.Path.Value ?? string.Empty;
             if (!url.StartsWith("/jellyfish.stream", StringComparison.OrdinalIgnoreCase))
             {
@@ -52,7 +50,8 @@ namespace Sample.HttpCommand.Controllers
           
             var nb = Interlocked.Increment(ref _nbConnections);
             CancellationTokenSource token = null;
-            try {
+            try 
+            {
                 if( nb > maxConcurrentConnection.Value )
                 {
                     context.Response.StatusCode = 503;
@@ -75,14 +74,14 @@ namespace Sample.HttpCommand.Controllers
                 var poller = new MetricsPoller(delay, token.Token);
                 poller.Start();
 
-                context.Response.ContentType = "text /event-stream";
+                context.Response.ContentType = "text/event-stream";
+                context.Response.Headers.Add("Connection", new string[] { "keep-alive" });
                 context.Response.Headers.Add("Cache-Control", new string[] { "no-cache, no-store, max-age=0, must-revalidate" });
                 context.Response.Headers.Add("Pragma", new string[] { "no-cache" });
-                context.Response.Headers.Add("Connection", new string[] { "keep-alive" });
                 context.Response.StatusCode = 200;
-
+                await context.Response.Body().FlushAsync();
+                
                 var ping = Encoding.UTF8.GetBytes("ping: \n");
-
                 while (!context.RequestAborted.IsCancellationRequested)
                 {
                     var events = poller.GetJsonMetrics();
@@ -108,9 +107,9 @@ namespace Sample.HttpCommand.Controllers
             catch { }           
             finally
             {
-                Interlocked.Decrement(ref _nbConnections);
                 if (token != null && !token.IsCancellationRequested)
                     token.Cancel();
+                Interlocked.Decrement(ref _nbConnections);
             }
         }         
     }

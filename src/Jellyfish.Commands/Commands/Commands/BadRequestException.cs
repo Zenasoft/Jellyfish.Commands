@@ -5,7 +5,6 @@ using System;
 
 namespace Jellyfish.Commands
 {
-
     internal class BadRequestException :ApplicationException
     {
         public BadRequestException(string message) : base(message)

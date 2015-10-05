@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Jellyfish.Commands.Commands.Commands
+namespace Jellyfish.Commands
 {
     [AttributeUsage(AttributeTargets.Class)]
     public class CommandAttribute : Attribute
