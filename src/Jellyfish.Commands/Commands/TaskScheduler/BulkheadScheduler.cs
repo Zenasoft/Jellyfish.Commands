@@ -62,7 +62,7 @@ namespace Jellyfish.Commands
         private static ThreadLocal<bool> _taskProcessingThread = new ThreadLocal<bool>();
 
         /// <summary>The threads used by the scheduler to process work.</summary> 
-        private readonly System.Threading.Thread[] _threads;
+        private readonly Thread[] _threads;
         /// <summary>The collection of tasks to be executed on our custom threads.</summary> 
         private readonly BlockingCollection<Task> _blockingTaskQueue;
         private int _pendingTasks;
