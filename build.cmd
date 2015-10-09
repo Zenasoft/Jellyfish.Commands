@@ -4,8 +4,10 @@ if NOT ERRORLEVEL 0 EXIT /B 1
 
 IF '%Configuration%' == '' (
   CMD /C dnu pack src\Jellyfish.Commands --configuration Release
+  CMD /C dnu pack src\Jellyfish.Commands.vnext --configuration Release
 ) ELSE (
   CMD /C dnu pack src\Jellyfish.Commands --configuration %Configuration%
+  CMD /C dnu pack src\Jellyfish.Commands.vnext --configuration %Configuration%
 )
 if NOT ERRORLEVEL 0 EXIT /B 1
 
