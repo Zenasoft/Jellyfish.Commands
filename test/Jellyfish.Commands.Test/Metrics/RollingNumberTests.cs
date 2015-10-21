@@ -92,7 +92,7 @@ namespace Jellyfish.Commands.Tests
         }
 
 
-    [Fact]
+        [Fact]
         public void testTimeout()
         {
             MockedClock time = new MockedClock();

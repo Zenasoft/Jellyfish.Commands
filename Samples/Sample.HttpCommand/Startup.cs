@@ -18,6 +18,8 @@ namespace Sample.HttpCommand
             services.AddJellyfish();
 
             services.AddMvc();
+
+          
         }
 
         // Configure is called after ConfigureServices is called.
@@ -29,7 +31,7 @@ namespace Sample.HttpCommand
             app.UseStaticFiles();
 
             // Add MVC to the request pipeline.
-            app.UseMvc();
+            app.UseMvc();            
         }
     }
 }

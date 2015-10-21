@@ -145,13 +145,12 @@ namespace Jellyfish.Commands
                 throw new ArgumentException("commandGroup can not be null or empty.");
 
             Logger = context.GetService<ILoggerFactory>()?.CreateLogger(this.GetType().FullName) ?? EmptyLogger.Instance;
-
-            _clock = clock ?? Clock.GetInstance(); // for test
             CommandGroup = commandGroup;
             CommandName = commandName ?? this.GetType().FullName;
+
+            _clock = clock ?? Clock.GetInstance(); // for test
             _threadPoolKey = threadPoolKey ?? CommandGroup;
             _executionResult = new ExecutionResult();
-
             _executionHook = executionHook ?? context.CommandExecutionHook;
 
             Properties = properties?.Build(CommandName) ?? new CommandProperties(CommandName);

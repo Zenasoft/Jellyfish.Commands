@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0-beta4",
+    "version": "1.0.0-beta5",
     "description": "Hystrix like .Net implementation for asp.net5.",
     "requireLicenseAcceptance": true,
     "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
@@ -16,7 +16,7 @@
     "projectUrl": "https://github.com/zenasoft/Jellyfish.Commands",
     "dependencies": {
         "Jellyfish.Commands": "",
-        "Microsoft.AspNet.Mvc": "6.0.0-beta7"
+        "Microsoft.AspNet.Mvc": "6.0.0-beta8"
     },
     "repository": {
         "type": "git",
