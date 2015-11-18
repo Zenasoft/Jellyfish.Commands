@@ -8,7 +8,6 @@ using Sample.HttpCommand.Commands;
 
 namespace Sample.HttpCommand.Controllers
 {
-    [Route("api/[controller]")]
     public class TestController : Controller
     {
         private IJellyfishContext _context;
