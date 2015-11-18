@@ -1,19 +1,23 @@
 dnvm use 1.0.0-beta8  
-CMD /C dnu restore
-if NOT ERRORLEVEL 0 EXIT /B 1
+dnu restore
+if not "%errorlevel%"=="0" goto failure
 
 IF '%Configuration%' == '' (
-  CMD /C dnu pack src\Jellyfish.Commands --configuration Release
-  CMD /C dnu pack src\Jellyfish.Commands.vnext --configuration Release
+  dnu pack src\Jellyfish.Commands --configuration Release
+  dnu pack src\Jellyfish.Commands.vnext --configuration Release
 ) ELSE (
-  CMD /C dnu pack src\Jellyfish.Commands --configuration %Configuration%
-  CMD /C dnu pack src\Jellyfish.Commands.vnext --configuration %Configuration%
+  dnu pack src\Jellyfish.Commands --configuration %Configuration%
+  dnu pack src\Jellyfish.Commands.vnext --configuration %Configuration%
 )
-if NOT ERRORLEVEL 0 EXIT /B 1
+if not "%errorlevel%"=="0" goto failure
 
 cd test\Jellyfish.Commands.test
-CMD /C dnx test 
-
+dnx test 
+if not "%errorlevel%"=="0" goto failure
 cd ..\..
 
-if NOT ERRORLEVEL 0 EXIT /B 1
+:success
+exit 0
+
+:failure
+exit -1
