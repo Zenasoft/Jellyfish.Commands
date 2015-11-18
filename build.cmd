@@ -1,4 +1,4 @@
-  
+dnvm use 1.0.0-beta8  
 CMD /C dnu restore
 if NOT ERRORLEVEL 0 EXIT /B 1
 
