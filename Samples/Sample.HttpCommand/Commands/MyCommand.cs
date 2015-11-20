@@ -7,12 +7,13 @@ using System.Threading.Tasks;
 
 namespace Sample.HttpCommand.Commands
 {
+  //  [Command("MyCommand")]
     class MyCommand : ServiceCommand<string>
     {
         private string _id;
 
         public MyCommand(IJellyfishContext ctx, string id) 
-            : base(ctx, "MyCommand")
+            : base( ctx )
         {
             _id = id;
         }

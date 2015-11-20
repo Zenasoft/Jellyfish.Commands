@@ -19,7 +19,7 @@ namespace Jellyfish.Commands
         /**
          * History of ServiceCommandInfo executed in this request.
          */
-        private Lazy<ConcurrentQueue<ServiceCommandInfo>> allExecutedCommands = new Lazy<ConcurrentQueue<ServiceCommandInfo>>(() => new ConcurrentQueue<ServiceCommandInfo>());
+        private Lazy<ConcurrentQueue<IServiceCommandInfo>> allExecutedCommands = new Lazy<ConcurrentQueue<IServiceCommandInfo>>(() => new ConcurrentQueue<IServiceCommandInfo>());
 
         // prevent public instantiation
         internal RequestLog()
@@ -31,9 +31,9 @@ namespace Jellyfish.Commands
          * 
          * @return {@code Collection<ServiceCommand<?>>}
          */
-        public IEnumerable<ServiceCommandInfo> GetAllExecutedCommands()
+        public IEnumerable<IServiceCommandInfo> GetAllExecutedCommands()
         {
-            return allExecutedCommands.IsValueCreated ? allExecutedCommands.Value.ToArray() : Enumerable.Empty<ServiceCommandInfo>();
+            return allExecutedCommands.IsValueCreated ? allExecutedCommands.Value.ToArray() : Enumerable.Empty<IServiceCommandInfo>();
         }
 
         /**
@@ -42,7 +42,7 @@ namespace Jellyfish.Commands
          * @param command
          *            {@code ServiceCommand<?>}
          */
-        public void AddExecutedCommand(ServiceCommandInfo command)
+        public void AddExecutedCommand(IServiceCommandInfo command)
         {
             if (allExecutedCommands.Value.Count >= MAX_STORAGE)
             {

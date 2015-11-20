@@ -8,14 +8,12 @@ namespace Jellyfish.Commands
     [AttributeUsage(AttributeTargets.Class)]
     public class CommandAttribute : Attribute
     {
-        public string Version { get; set; }
-        public int Port { get; set; }
-        public string ServiceName { get; set; }
+        public string CommandGroup { get; set; }
+        public string CommandName { get; set; }
 
-        public CommandAttribute(int port, string version)
+        public CommandAttribute(string commandGroup)
         {
-            Version = version;
-            Port = port;
+            CommandGroup = commandGroup;
         }
     }
 }

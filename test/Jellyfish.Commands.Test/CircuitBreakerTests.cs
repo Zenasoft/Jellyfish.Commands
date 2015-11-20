@@ -530,7 +530,7 @@ namespace Jellyfish.Commands.Tests
 
             bool error;
 
-            public TestCommand(IJellyfishContext ctx, bool error) : base(ctx ?? new JellyfishContext(), "group")
+            public TestCommand(IJellyfishContext ctx, bool error) : base( ctx ?? new JellyfishContext(), "group" )
             {
                 this.error = error;
             }

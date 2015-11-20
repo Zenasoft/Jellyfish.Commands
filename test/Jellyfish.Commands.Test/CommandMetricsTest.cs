@@ -77,7 +77,7 @@ namespace Jellyfish.Commands.Tests
             int duration;
 
             public LatentCommand(IJellyfishContext ctx,  int duration)
-            : base(ctx, "Latent", new CommandPropertiesBuilder().WithExecutionTimeoutInMilliseconds(1000), null, null)
+            : base( ctx, "Latent", null, new CommandPropertiesBuilder().WithExecutionTimeoutInMilliseconds( 1000 ), null )
             {
                 this.duration = duration;
             }

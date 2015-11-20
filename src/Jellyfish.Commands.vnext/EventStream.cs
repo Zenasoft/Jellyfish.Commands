@@ -54,6 +54,7 @@ namespace Jellyfish.Commands
                     }
                 }
 
+                //Console.WriteLine( "Sending events..." );
                 token = new CancellationTokenSource();
                 var poller = new MetricsPoller(delay, token.Token);
                 poller.Start();
@@ -63,7 +64,8 @@ namespace Jellyfish.Commands
                 context.Response.Headers.Add("Pragma", new string[]{"no-cache"});
                 context.Response.StatusCode = 200;
                 await context.Response.Body.FlushAsync();
-                var ping = Encoding.UTF8.GetBytes("ping: \n");
+                var ping = Encoding.UTF8.GetBytes( "ping: \n\n" );
+
                 while (!context.RequestAborted.IsCancellationRequested)
                 {
                     var events = poller.GetJsonMetrics();
@@ -75,7 +77,7 @@ namespace Jellyfish.Commands
                     {
                         foreach (var json in events)
                         {
-                            var bytes = Encoding.UTF8.GetBytes(String.Format("data: {0}\n", json));
+                            var bytes = Encoding.UTF8.GetBytes(String.Format( "data: {0}\n\n", json));
                             context.Response.Body.Write(bytes, 0, bytes.Length);
                         }
                     }
@@ -89,6 +91,7 @@ namespace Jellyfish.Commands
             }
             finally
             {
+                //Console.WriteLine( "Stop events" );
                 if (token != null && !token.IsCancellationRequested)
                     token.Cancel();
                 Interlocked.Decrement(ref _nbConnections);

@@ -23,7 +23,7 @@ namespace Jellyfish.Commands.Tests
             set
             {
                 fallback = value;
-                SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasFallBack, value != null);
+                SetFlag(ServiceCommandOptions.HasFallBack, value != null);
             }
         }
 
@@ -84,8 +84,8 @@ namespace Jellyfish.Commands.Tests
         public TestServiceCommand(IJellyfishContext ctx, string name, CommandPropertiesBuilder builder, IClock clock=null, TestCircuitBreaker circuitBreaker =null, CommandExecutionHook executionHook=null)
             : base(ctx ?? new JellyfishContext(), clock, name, name, null, builder, circuitBreaker, circuitBreaker?.Metrics, executionHook:executionHook)
         {
-            SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasFallBack, false);
-            SetFlag(ServiceCommand<int>.ServiceCommandOptions.HasCacheKey, false);
+            SetFlag(ServiceCommandOptions.HasFallBack, false);
+            SetFlag(ServiceCommandOptions.HasCacheKey, false);
             Id = cx++;
         }
 

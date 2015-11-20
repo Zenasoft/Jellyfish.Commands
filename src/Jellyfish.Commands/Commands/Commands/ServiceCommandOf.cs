@@ -26,7 +26,7 @@ namespace Jellyfish.Commands
     ///</summary>
     /// 
     /// param <T>  the return type    
-    public abstract class ServiceCommand<T> : ServiceCommandInfo
+    public abstract class ServiceCommand<T> : IServiceCommandInfo
     {
         #region Properties
         /// Cache item to save value and execution result of a command
@@ -36,22 +36,12 @@ namespace Jellyfish.Commands
             public T Value;
         }
 
-        [Flags]
-        internal enum ServiceCommandOptions
-        {
-            None = 0,
-            ThreadExecutionStrategy = 1,
-            SemaphoreExecutionStrategy = 2,
-            HasFallBack = 4,
-            HasCacheKey = 8
-        }
-
         private ICommandExecutionHook _executionHook;
         private RequestCache<CacheItem> _requestCache;
         private RequestLog _currentRequestLog;
         private ServiceCommandOptions _flags;
         private ICircuitBreaker _circuitBreaker;
-        private static ConcurrentDictionary<string, ServiceCommandOptions> _states = new ConcurrentDictionary<string, ServiceCommandOptions>();
+        private static ConcurrentDictionary<string, CommandState> _states = new ConcurrentDictionary<string, CommandState>();
         private static ConcurrentDictionary<string, ITryableSemaphore> _fallbackSemaphorePerCircuit = new ConcurrentDictionary<string, ITryableSemaphore>();
         private static ConcurrentDictionary<string, ITryableSemaphore> _executionSemaphorePerCircuit = new ConcurrentDictionary<string, ITryableSemaphore>();
         private ITryableSemaphore fallbackSemaphoreOverride;
@@ -82,7 +72,7 @@ namespace Jellyfish.Commands
         /// </summary>
         public ITryableSemaphore ExecutionSemaphore
         {
-            get { return executionSemaphoreOverride ?? _executionSemaphorePerCircuit.GetOrAdd(CommandName, new TryableSemaphoreActual(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests));}
+            get { return executionSemaphoreOverride ?? _executionSemaphorePerCircuit.GetOrAdd( CommandName, new TryableSemaphoreActual( Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests ) ); }
             internal set { executionSemaphoreOverride = value; }
         }
 
@@ -91,16 +81,16 @@ namespace Jellyfish.Commands
         /// </summary>
         public ITryableSemaphore FallBackSemaphore
         {
-            get { return fallbackSemaphoreOverride ?? _fallbackSemaphorePerCircuit.GetOrAdd(CommandName, new TryableSemaphoreActual(Properties.FallbackIsolationSemaphoreMaxConcurrentRequests)); }
-            internal set {fallbackSemaphoreOverride = value;}
+            get { return fallbackSemaphoreOverride ?? _fallbackSemaphorePerCircuit.GetOrAdd( CommandName, new TryableSemaphoreActual( Properties.FallbackIsolationSemaphoreMaxConcurrentRequests ) ); }
+            internal set { fallbackSemaphoreOverride = value; }
         }
 
         public TaskScheduler TaskScheduler
         {
             get
             {
-                if (_taskscheduler == null)
-                    _taskscheduler = TaskSchedulerFactory.CreateOrRetrieve(Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Value, _threadPoolKey);
+                if(_taskscheduler == null)
+                    _taskscheduler = TaskSchedulerFactory.CreateOrRetrieve( Properties.ExecutionIsolationSemaphoreMaxConcurrentRequests.Value, _threadPoolKey );
                 return _taskscheduler;
             }
             set { _taskscheduler = value; }
@@ -133,58 +123,49 @@ namespace Jellyfish.Commands
         /// <param name="threadPoolKey">
         /// used to identify the thread pool in which a <see cref="ServiceCommand{T}"/> executes.
         /// </param>
-        protected ServiceCommand(IJellyfishContext context, string commandGroup, CommandPropertiesBuilder properties = null, string threadPoolKey = null, string commandName = null, CommandExecutionHook executionHook = null)
-            : this(context, null, commandGroup, commandName, threadPoolKey, properties)
+        internal protected ServiceCommand(IJellyfishContext context, string commandGroup=null, string commandName = null, CommandPropertiesBuilder properties = null, string threadPoolKey = null, CommandExecutionHook executionHook = null)
+            : this( context, null, commandGroup, commandName, threadPoolKey, properties )
         {
         }
 
-        internal ServiceCommand(IJellyfishContext context, IClock clock, string commandGroup, string commandName, string threadPoolKey = null, CommandPropertiesBuilder properties = null, ICircuitBreaker circuitBreaker = null, CommandMetrics metrics = null, CommandExecutionHook executionHook = null)
+        internal ServiceCommand(IJellyfishContext context, IClock clock, string commandGroup=null, string commandName=null, string threadPoolKey = null, CommandPropertiesBuilder properties = null, ICircuitBreaker circuitBreaker = null, CommandMetrics metrics = null, CommandExecutionHook executionHook = null)
         {
-            Contract.Requires(context != null);
-            if (String.IsNullOrEmpty(commandGroup))
-                throw new ArgumentException("commandGroup can not be null or empty.");
+            Contract.Requires( context != null );
+            CommandState state = _states.GetOrAdd( this.GetType().FullName, (n) => ServiceCommandHelper.PrepareInternal( this.GetType(), context, commandGroup, commandName, properties, clock, metrics, circuitBreaker ) );
 
-            Logger = context.GetService<ILoggerFactory>()?.CreateLogger(this.GetType().FullName) ?? EmptyLogger.Instance;
-            CommandGroup = commandGroup;
-            CommandName = commandName ?? this.GetType().FullName;
+            if(String.IsNullOrEmpty( state.CommandGroup ))
+                throw new ArgumentException( "commandGroup can not be null or empty." );
 
+            Logger = context.GetService<ILoggerFactory>()?.CreateLogger( this.GetType().FullName ) ?? EmptyLogger.Instance;
+
+            CommandGroup = state.CommandGroup;
+            CommandName = state.CommandName;
             _clock = clock ?? Clock.GetInstance(); // for test
+            Properties = properties?.Build( CommandName ) ?? new CommandProperties( CommandName );
+            Metrics = metrics ?? CommandMetricsFactory.GetInstance( CommandName, CommandGroup, Properties, _clock );
+            _circuitBreaker = circuitBreaker ?? ( Properties.CircuitBreakerEnabled.Value ? CircuitBreakerFactory.GetOrCreateInstance( CommandName, Properties, Metrics, _clock ) : new NoOpCircuitBreaker() );
+            context.MetricsPublisher.CreateOrRetrievePublisherForCommand( CommandGroup, Metrics, _circuitBreaker );
+
+            this._flags = state.Flags;
+
             _threadPoolKey = threadPoolKey ?? CommandGroup;
             _executionResult = new ExecutionResult();
             _executionHook = executionHook ?? context.CommandExecutionHook;
 
-            Properties = properties?.Build(CommandName) ?? new CommandProperties(CommandName);
-
-            this._flags = _states.GetOrAdd(CommandName, (n) =>
-            {
-                ServiceCommandOptions flags = ServiceCommandOptions.None;
-                if (this.IsMethodImplemented("GetFallback"))
-                    flags |= ServiceCommandOptions.HasFallBack;
-                if (this.IsMethodImplemented("GetCacheKey"))
-                    flags |= ServiceCommandOptions.HasCacheKey;
-                return flags;
-            });
-
             var executionPolicy = Properties.ExecutionIsolationStrategy.Value;
-            if (executionPolicy == ExecutionIsolationStrategy.Semaphore) 
+            if(executionPolicy == ExecutionIsolationStrategy.Semaphore)
                 _flags |= ServiceCommandOptions.SemaphoreExecutionStrategy;
-            if (executionPolicy == ExecutionIsolationStrategy.Thread)
+            if(executionPolicy == ExecutionIsolationStrategy.Thread)
                 _flags |= ServiceCommandOptions.ThreadExecutionStrategy;
 
-            Metrics = metrics ?? CommandMetricsFactory.GetInstance(CommandName, CommandGroup, Properties, _clock);
-
-            _circuitBreaker = circuitBreaker ?? (Properties.CircuitBreakerEnabled.Value ? CircuitBreakerFactory.GetOrCreateInstance(CommandName, Properties, Metrics, _clock) : new NoOpCircuitBreaker());
-
-            context.MetricsPublisher.CreateOrRetrievePublisherForCommand(CommandGroup, Metrics, _circuitBreaker);
-
-            if (Properties.RequestLogEnabled.Value)
+            if(Properties.RequestLogEnabled.Value)
             {
                 _currentRequestLog = context.GetRequestLog();
             }
 
-            if ((_flags & ServiceCommandOptions.HasCacheKey) == ServiceCommandOptions.HasCacheKey && Properties.RequestCacheEnabled.Value)
+            if(( _flags & ServiceCommandOptions.HasCacheKey ) == ServiceCommandOptions.HasCacheKey && Properties.RequestCacheEnabled.Value)
             {
-                _requestCache = context.GetCache<CacheItem>(CommandName);
+                _requestCache = context.GetCache<CacheItem>( CommandName );
             }
         }
 
@@ -803,13 +784,6 @@ namespace Jellyfish.Commands
                 _flags |= option;
             else
                 _flags &= ~option;
-        }
-
-        private bool IsMethodImplemented(string methodName)
-        {
-            return (this.GetType()
-                        .GetMethod(methodName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                        .DeclaringType != typeof(ServiceCommand<T>));
         }
     }
 }

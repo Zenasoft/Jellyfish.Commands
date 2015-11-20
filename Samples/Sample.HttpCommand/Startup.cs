@@ -17,9 +17,7 @@ namespace Sample.HttpCommand
         {
             services.AddJellyfish();
 
-            services.AddMvc();
-
-          
+            services.AddMvc();          
         }
 
         // Configure is called after ConfigureServices is called.

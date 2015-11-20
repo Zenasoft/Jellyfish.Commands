@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Jellyfish.Commands
 {
-    public interface ServiceCommandInfo
+    public interface IServiceCommandInfo
     {
          string CommandGroup { get;}
 
