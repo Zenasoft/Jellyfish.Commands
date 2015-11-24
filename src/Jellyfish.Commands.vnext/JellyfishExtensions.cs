@@ -3,6 +3,7 @@ using Jellyfish.Commands;
 using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.Framework.DependencyInjection
 {

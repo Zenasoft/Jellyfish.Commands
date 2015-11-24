@@ -1,4 +1,4 @@
-call dnvm use 1.0.0-beta8  
+call dnvm use 1.0.0-rc1-final  
 call dnu restore
 if not "%errorlevel%"=="0" goto failure
 

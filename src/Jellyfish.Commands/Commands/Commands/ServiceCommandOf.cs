@@ -10,7 +10,7 @@ using Jellyfish.Commands.CircuitBreaker;
 using Jellyfish.Commands.Metrics;
 using Jellyfish.Commands.Utils;
 using System.Diagnostics.Contracts;
-using Microsoft.Framework.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfish.Commands
 {

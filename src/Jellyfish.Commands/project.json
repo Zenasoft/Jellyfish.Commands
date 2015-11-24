@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0-beta9",
+    "version": "1.0.0-beta10",
     "description": "Hystrix like .Net implementation.",
     "requireLicenseAcceptance": true,
     "licenseUrl": "http://www.apache.org/licenses/LICENSE-2.0",
@@ -16,9 +16,9 @@
     "dependencies": {
         "Newtonsoft.Json": "7.0.1",
         "System.Net.Http": "4.0.0", 
-        "Jellyfish.Configuration": "1.0.0-beta5-*",
-      "Microsoft.Framework.Logging.Abstractions": "1.0.0-beta8",
-      "Microsoft.Framework.NotNullAttribute.Sources": "1.0.0-beta8"
+        "Jellyfish.Configuration": "1.0.0-beta10",
+      "Microsoft.Extensions.Logging.Abstractions": "1.0.0-rc1-final",
+    "Microsoft.Framework.NotNullAttribute.Sources": {"version": "1.0.0-*","type": "build" }
     },
     "repository": {
         "type": "git",
