@@ -16,7 +16,7 @@
     "dependencies": {
         "Newtonsoft.Json": "7.0.1",
         "System.Net.Http": "4.0.0", 
-        "Jellyfish.Configuration": "1.0.0-beta10",
+        "Jellyfish.Configuration": "1.0.0-beta10-*",
       "Microsoft.Extensions.Logging.Abstractions": "1.0.0-rc1-final",
     "Microsoft.Framework.NotNullAttribute.Sources": {"version": "1.0.0-*","type": "build" }
     },
