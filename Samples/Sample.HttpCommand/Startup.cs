@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNet.Builder;
 using Microsoft.AspNet.Hosting;
-using Microsoft.Framework.DependencyInjection;
-using Jellyfish.Commands;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Sample.HttpCommand

@@ -22,7 +22,7 @@ namespace Jellyfish.Commands
         public async Task Invoke(HttpContext context)
         {
             var url = context.Request.Path.Value ?? string.Empty;
-            if (!url.StartsWith("/jellyfish.stream", StringComparison.OrdinalIgnoreCase))
+            if (!url.StartsWith("/hystrix.stream", StringComparison.OrdinalIgnoreCase))
             {
                 await _next(context);
                 return;
